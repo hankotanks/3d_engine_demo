@@ -1,18 +1,20 @@
 
-use vertex::Vertex;
+use cgmath::Point3;
 
-enum ObjectShape {
+use crate::vertex::Vertex;
+
+pub enum ObjectShape {
     Cube
 }
 
-struct Object {
-    shape: ObjectShape,
-    color: [f32; 3]
+pub struct Object {
+    pub shape: ObjectShape,
+    pub color: [f32; 3]
 }
 
-struct ObjectData {
-    vertices: Vec<Vertex>,
-    indices: Vec<u16>
+pub struct ObjectData {
+    pub vertices: Vec<Vertex>,
+    pub indices: Vec<u16>
 }
 
 impl Object {
@@ -22,8 +24,9 @@ impl Object {
             indices: Vec::new() 
         };
 
-        match self {
-            Self::Cube => {
+        match self.shape {
+            ObjectShape::Cube => {
+                let pos = Point3::new(pos.x as f32, pos.y as f32, pos.z as f32);
                 let positions: [[f32; 3]; 8] = [
                     [ pos.x - 0.5, pos.y - 0.5, pos.z + 0.5 ],
                     [ pos.x + 0.5, pos.y - 0.5, pos.z + 0.5 ],
@@ -35,7 +38,7 @@ impl Object {
                     [ pos.x + 0.5, pos.y + 0.5, pos.z - 0.5 ],
                 ];
 
-                for pt in positions.iter() {
+                for pt in positions.into_iter() {
                     data.vertices.push(
                         Vertex { position: pt, color: self.color }
                     );
@@ -52,5 +55,7 @@ impl Object {
                 ];
             }
         }
+
+        data
     }
 }
