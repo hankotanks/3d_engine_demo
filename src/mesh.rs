@@ -30,29 +30,43 @@ impl Default for Mesh {
 }
 
 impl Mesh {
-    pub fn index_count(&self) -> u32 {
-        36
-    }
+    pub fn build_buffers(&self, device: &wgpu::Device) -> MeshBufferData {
+        let mut vertices = Vec::new();
+        let mut indices = Vec::new();
+        for (pos, obj) in self.objects.iter() {
+            let index_offset = vertices.len() as u16;
+            let mut data = obj.data(*pos);
 
-    pub fn build_vertex_buffer(&self, device: &wgpu::Device) -> wgpu::Buffer {
-        let origin = Point3::new(0, 0, 0);
-        device.create_buffer_init(
+            vertices.append(&mut data.vertices);
+            indices.append(
+                &mut data.indices.iter().map(|i| *i + index_offset).collect::<Vec<u16>>()
+            );
+        }
+
+        let vertex_buffer = device.create_buffer_init(
             &wgpu::util::BufferInitDescriptor {
                 label: None,
-                contents: bytemuck::cast_slice(self.objects[&origin].data(origin).vertices.as_slice()),
+                contents: bytemuck::cast_slice(vertices.as_slice()),
                 usage: wgpu::BufferUsages::VERTEX
             }
-        )
-    }
+        );
 
-    pub fn build_index_buffer(&self, device: &wgpu::Device) -> wgpu::Buffer {
-        let origin = Point3::new(0, 0, 0);
-        device.create_buffer_init(
+        let index_buffer = device.create_buffer_init(
             &wgpu::util::BufferInitDescriptor {
                 label: None,
-                contents: bytemuck::cast_slice(self.objects[&origin].data(origin).indices.as_slice()),
+                contents: bytemuck::cast_slice(indices.as_slice()),
                 usage: wgpu::BufferUsages::INDEX,
             }
-        )
+        );
+
+        let index_count = indices.len() as u32;
+
+        MeshBufferData { vertex_buffer, index_buffer, index_count }
     }
+}
+
+pub struct MeshBufferData {
+    pub vertex_buffer: wgpu::Buffer,
+    pub index_buffer: wgpu::Buffer,
+    pub index_count: u32
 }

@@ -215,10 +215,11 @@ impl State {
     }
 
     pub fn update(&mut self, mesh: &Mesh) {
-        self.index_count = mesh.index_count();
-
-        self.vertex_buffer = mesh.build_vertex_buffer(&self.device);
-        self.index_buffer = mesh.build_index_buffer(&self.device);
+        let buffer_data = mesh.build_buffers(&self.device);
+        
+        self.vertex_buffer = buffer_data.vertex_buffer;
+        self.index_buffer = buffer_data.index_buffer;
+        self.index_count = buffer_data.index_count;
 
         self.camera_uniform.update_projection(&self.camera);
         self.queue.write_buffer(
