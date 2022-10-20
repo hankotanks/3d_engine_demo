@@ -23,6 +23,22 @@ impl Default for Mesh {
                     }
                 );
 
+                objects.insert(
+                    Point3::new(0, 0, 2),
+                    Object {
+                        shape: ObjectShape::Cube,
+                        color: [0.5, 0.5, 0.8]
+                    }
+                );
+
+                objects.insert(
+                    Point3::new(1, 1, 1),
+                    Object {
+                        shape: ObjectShape::Cube,
+                        color: [0.5, 0.5, 0.8]
+                    }
+                );
+
                 objects
             }
         }

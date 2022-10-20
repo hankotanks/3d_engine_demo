@@ -1,7 +1,7 @@
 use wgpu::util::DeviceExt;
 use winit::window;
 
-use crate::{camera::{Camera, CameraUniform}, vertex::Vertex, mesh::Mesh, light::LightUniform};
+use crate::{camera::{Camera, CameraUniform}, vertex::Vertex, mesh::Mesh, light::LightUniform, texture};
 
 
 pub struct State {
@@ -20,6 +20,7 @@ pub struct State {
     pub light_uniform: LightUniform,
     pub light_buffer: wgpu::Buffer,
     pub light_bind_group: wgpu::BindGroup,
+    pub depth_texture_view: wgpu::TextureView,
     pub render_pipeline: wgpu::RenderPipeline
 }
 
@@ -180,6 +181,8 @@ impl State {
             wgpu::include_wgsl!("shader.wgsl")
         );    
 
+        let depth_texture_view = texture::create_depth_texture(&device, &config);
+
         let render_pipeline_layout = device.create_pipeline_layout(
             &wgpu::PipelineLayoutDescriptor {
                 label: None,
@@ -218,13 +221,19 @@ impl State {
                 primitive: wgpu::PrimitiveState {
                     topology: wgpu::PrimitiveTopology::TriangleList,
                     strip_index_format: None,
-                    front_face: wgpu::FrontFace::Cw,
+                    front_face: wgpu::FrontFace::Ccw,
                     cull_mode: Some(wgpu::Face::Back),
                     polygon_mode: wgpu::PolygonMode::Fill,
                     unclipped_depth: false,
                     conservative: false
                 },
-                depth_stencil: None,
+                depth_stencil: Some(wgpu::DepthStencilState {
+                    format: texture::DEPTH_FORMAT,
+                    depth_write_enabled: true,
+                    depth_compare: wgpu::CompareFunction::Less,
+                    stencil: wgpu::StencilState::default(),
+                    bias: wgpu::DepthBiasState::default()
+                } ),
                 multisample: wgpu::MultisampleState {
                     count: 1,
                     mask: !0,
@@ -250,6 +259,7 @@ impl State {
             light_uniform,
             light_buffer,
             light_bind_group,
+            depth_texture_view,
             render_pipeline
         }
     }
@@ -259,6 +269,9 @@ impl State {
             self.size = new_size;
             self.config.width = new_size.width;
             self.config.height = new_size.height;
+
+            self.depth_texture_view = texture::create_depth_texture(&self.device, &self.config);
+
             self.surface.configure(&self.device, &self.config);
         }
     }
@@ -325,7 +338,14 @@ impl State {
                             }
                         )
                     ],
-                    depth_stencil_attachment: None
+                    depth_stencil_attachment: Some(wgpu::RenderPassDepthStencilAttachment {
+                        view: &self.depth_texture_view,
+                        depth_ops: Some(wgpu::Operations {
+                            load: wgpu::LoadOp::Clear(1.0),
+                            store: true,
+                        } ),
+                        stencil_ops: None,
+                    } )
                 }
             );
 

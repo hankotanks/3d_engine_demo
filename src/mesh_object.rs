@@ -46,12 +46,13 @@ impl Object {
                 }
 
                 let normals: [Vector3<f32>; 6] = [
-                    (points[7] - points[3]).cross(points[1] - points[3]).normalize(), //top
-                    (points[0] - points[2]).cross(points[6] - points[2]).normalize(), //bottom
-                    (points[1] - points[0]).cross(points[4] - points[0]).normalize(), //left
-                    (points[6] - points[2]).cross(points[3] - points[2]).normalize(), //right
                     (points[1] - points[2]).cross(points[0] - points[2]).normalize(), //front
                     (points[6] - points[5]).cross(points[4] - points[5]).normalize(), //back
+                    (points[1] - points[0]).cross(points[4] - points[0]).normalize(), //left
+                    (points[6] - points[2]).cross(points[3] - points[2]).normalize(), //right
+                    (points[7] - points[3]).cross(points[1] - points[3]).normalize(), //top
+                    (points[0] - points[2]).cross(points[6] - points[2]).normalize(), //bottom
+                    
                 ];
 
                 let normals: [[f32; 3]; 6] = [
@@ -64,50 +65,50 @@ impl Object {
                 ];
 
                 data.vertices.append(&mut vec![
-                    // top
+                    // front
                     Vertex { position: positions[0], color: self.color, normal: normals[0] },
                     Vertex { position: positions[2], color: self.color, normal: normals[0] },
                     Vertex { position: positions[1], color: self.color, normal: normals[0] },
                     Vertex { position: positions[3], color: self.color, normal: normals[0] },
 
-                    // bottom
+                    // back
                     Vertex { position: positions[4], color: self.color, normal: normals[1] },
                     Vertex { position: positions[6], color: self.color, normal: normals[1] },
                     Vertex { position: positions[5], color: self.color, normal: normals[1] },
                     Vertex { position: positions[7], color: self.color, normal: normals[1] },
 
                     // left
-                    Vertex { position: positions[0], color: self.color, normal: normals[2] },
-                    Vertex { position: positions[1], color: self.color, normal: normals[2] },
                     Vertex { position: positions[4], color: self.color, normal: normals[2] },
                     Vertex { position: positions[5], color: self.color, normal: normals[2] },
+                    Vertex { position: positions[0], color: self.color, normal: normals[2] },
+                    Vertex { position: positions[1], color: self.color, normal: normals[2] },
 
                     // right
-                    Vertex { position: positions[3], color: self.color, normal: normals[3] },
-                    Vertex { position: positions[2], color: self.color, normal: normals[3] },
-                    Vertex { position: positions[7], color: self.color, normal: normals[3] },
                     Vertex { position: positions[6], color: self.color, normal: normals[3] },
+                    Vertex { position: positions[7], color: self.color, normal: normals[3] },
+                    Vertex { position: positions[2], color: self.color, normal: normals[3] },
+                    Vertex { position: positions[3], color: self.color, normal: normals[3] },
 
-                    // front
-                    Vertex { position: positions[1], color: self.color, normal: normals[4] },
-                    Vertex { position: positions[3], color: self.color, normal: normals[4] },
+                    // top
                     Vertex { position: positions[5], color: self.color, normal: normals[4] },
+                    Vertex { position: positions[1], color: self.color, normal: normals[4] },
                     Vertex { position: positions[7], color: self.color, normal: normals[4] },
+                    Vertex { position: positions[3], color: self.color, normal: normals[4] },
 
-                    // back
-                    Vertex { position: positions[0], color: self.color, normal: normals[5] },
-                    Vertex { position: positions[2], color: self.color, normal: normals[5] },
+                    // bottom
                     Vertex { position: positions[4], color: self.color, normal: normals[5] },
+                    Vertex { position: positions[0], color: self.color, normal: normals[5] },
                     Vertex { position: positions[6], color: self.color, normal: normals[5] },
+                    Vertex { position: positions[2], color: self.color, normal: normals[5] },
                 ]);
 
                 data.indices = vec![
                     0, 1, 3, 0, 3, 2,
-                    4, 5, 7, 4, 7, 6,
-                    8, 9, 11, 8, 11, 10,
+                    7, 5, 4, 7, 4, 6,
+                    11, 9, 8, 11, 8, 10,
                     12, 13, 15, 12, 15, 14,
                     16, 17, 19, 16, 19, 18,
-                    20, 21, 23, 20, 23, 22
+                    23, 21, 20, 23, 20, 22
                 ];
             }
         }
