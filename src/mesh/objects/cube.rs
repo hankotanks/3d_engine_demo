@@ -4,9 +4,12 @@ use cgmath::{
     Vector3
 };
 
-use crate::vertex::Vertex;
+use super::{
+    MeshObject, 
+    MeshObjectData
+};
 
-use super::{MeshObject, MeshObjectData};
+use crate::vertex::Vertex;
 
 
 pub struct Cube {

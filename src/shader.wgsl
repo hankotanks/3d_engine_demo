@@ -24,19 +24,17 @@ struct VertexOutput {
     @builtin(position) clip_position: vec4<f32>,
     @location(0) color: vec3<f32>,
     @location(1) world_normal: vec3<f32>,
-    @location(2) world_position: vec3<f32>,
-    @location(3) camera_position: vec4<f32>
+    @location(2) world_position: vec3<f32>
 };
 
 @vertex
 fn vs_main(model: VertexInput) -> VertexOutput {
     var out: VertexOutput;
-    out.color = model.color;
     out.clip_position = camera.projection * vec4<f32>(model.position, 1.0);
+    out.color = model.color;
     out.world_normal = model.normal;
-    var world_position: vec4<f32> = vec4<f32>(model.position, 1.0);
-    out.world_position = world_position.xyz;
-    out.camera_position = camera.position;
+    out.world_position = model.position;
+    
     return out;
 }
 

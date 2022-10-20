@@ -1,3 +1,7 @@
+mod controller;
+
+pub use controller::CameraController;
+
 use cgmath::{
     Point3,
     Matrix4, 

@@ -1,8 +1,13 @@
 use wgpu::util::DeviceExt;
 use winit::window;
 
-use crate::{camera::{Camera, CameraUniform}, vertex::Vertex, mesh::Mesh, light::LightUniform, depth_texture};
-
+use crate::{
+    camera,
+    vertex::Vertex,
+    mesh,
+    light::LightUniform,
+    depth_texture::create_depth_texture
+};
 
 pub struct State {
     pub size: winit::dpi::PhysicalSize<u32>,
@@ -13,8 +18,8 @@ pub struct State {
     pub vertex_buffer: wgpu::Buffer,
     pub index_buffer: wgpu::Buffer,
     pub index_count: u32,
-    pub camera: Camera,
-    pub camera_uniform: CameraUniform,
+    pub camera: camera::Camera,
+    pub camera_uniform: camera::CameraUniform,
     pub camera_buffer: wgpu::Buffer,
     pub camera_bind_group: wgpu::BindGroup,
     pub light_uniform: LightUniform,
@@ -85,9 +90,9 @@ impl State {
 
         let index_count = 0u32;
 
-        let camera = Camera::default();
+        let camera = camera::Camera::default();
 
-        let mut camera_uniform = CameraUniform::new();
+        let mut camera_uniform = camera::CameraUniform::new();
         camera_uniform.update_projection(&camera);
 
         let camera_buffer = device.create_buffer_init(
@@ -105,7 +110,8 @@ impl State {
                 entries: &[
                     wgpu::BindGroupLayoutEntry {
                         binding: 0,
-                        visibility: wgpu::ShaderStages::VERTEX | wgpu::ShaderStages::FRAGMENT,
+                        visibility: wgpu::ShaderStages::VERTEX 
+                            | wgpu::ShaderStages::FRAGMENT,
                         ty: wgpu::BindingType::Buffer {
                             ty: wgpu::BufferBindingType::Uniform,
                             has_dynamic_offset: false,
@@ -151,7 +157,8 @@ impl State {
                 entries: &[
                     wgpu::BindGroupLayoutEntry {
                         binding: 0,
-                        visibility: wgpu::ShaderStages::VERTEX | wgpu::ShaderStages::FRAGMENT,
+                        visibility: wgpu::ShaderStages::VERTEX 
+                            | wgpu::ShaderStages::FRAGMENT,
                         ty: wgpu::BindingType::Buffer {
                             ty: wgpu::BufferBindingType::Uniform,
                             has_dynamic_offset: false,
@@ -181,7 +188,7 @@ impl State {
             wgpu::include_wgsl!("shader.wgsl")
         );    
 
-        let depth_texture_view = depth_texture::create_depth_texture(&device, &config);
+        let depth_texture_view = create_depth_texture(&device, &config);
 
         let render_pipeline_layout = device.create_pipeline_layout(
             &wgpu::PipelineLayoutDescriptor {
@@ -228,7 +235,7 @@ impl State {
                     conservative: false
                 },
                 depth_stencil: Some(wgpu::DepthStencilState {
-                    format: depth_texture::DEPTH_FORMAT,
+                    format: wgpu::TextureFormat::Depth32Float,
                     depth_write_enabled: true,
                     depth_compare: wgpu::CompareFunction::Less,
                     stencil: wgpu::StencilState::default(),
@@ -270,7 +277,10 @@ impl State {
             self.config.width = new_size.width;
             self.config.height = new_size.height;
 
-            self.depth_texture_view = depth_texture::create_depth_texture(&self.device, &self.config);
+            self.depth_texture_view = create_depth_texture(
+                &self.device, 
+                &self.config
+            );
 
             self.surface.configure(&self.device, &self.config);
         }
@@ -280,7 +290,7 @@ impl State {
         self.resize(self.size);
     }
 
-    pub fn update(&mut self, mesh: &Mesh) {
+    pub fn update(&mut self, mesh: &mesh::Mesh) {
         let buffer_data = mesh.build_buffers(&self.device);
         
         self.vertex_buffer = buffer_data.vertex_buffer;
@@ -349,20 +359,20 @@ impl State {
                 }
             );
 
+            // Set render pipeline
             render_pass.set_pipeline(&self.render_pipeline);
+
+            // Camera and light bind groups
             render_pass.set_bind_group(0, &self.camera_bind_group, &[]);
             render_pass.set_bind_group(1, &self.light_bind_group, &[]);
 
+            // Set vertex and index buffers
             render_pass.set_vertex_buffer(
                 0, 
-                self.vertex_buffer.slice(..)
-            );
-
+                self.vertex_buffer.slice(..));
             render_pass.set_index_buffer(
                 self.index_buffer.slice(..), 
-                wgpu::IndexFormat::Uint16
-            );
-
+                wgpu::IndexFormat::Uint16);
             render_pass.draw_indexed(0..self.index_count, 0, 0..1);
         }
     
