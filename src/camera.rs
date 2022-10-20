@@ -136,17 +136,20 @@ impl Default for CameraBounds {
 #[repr(C)]
 #[derive(Copy, Clone, bytemuck::Pod, bytemuck::Zeroable)]
 pub struct CameraUniform {
-    projection: [[f32; 4]; 4]
+    pub position: [f32; 4],
+    pub projection: [[f32; 4]; 4]
 }
 
 impl CameraUniform {
     pub fn new() -> Self {
         Self {
+            position: [0.0; 4],
             projection: Matrix4::identity().into()
         }
     }
 
     pub fn update_projection(&mut self, camera: &Camera) {
+        self.position = [camera.eye.x, camera.eye.y, camera.eye.z, 1.0];
         self.projection = camera.build_view_projection_matrix().into();
     }
 }

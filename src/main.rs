@@ -3,6 +3,7 @@ mod mesh;
 mod mesh_object;
 mod camera;
 mod camera_controller;
+mod light;
 mod vertex;
 
 use camera_controller::CameraController;
