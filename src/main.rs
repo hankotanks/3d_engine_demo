@@ -1,6 +1,5 @@
 mod state;
 mod mesh;
-mod mesh_object;
 mod camera;
 mod camera_controller;
 mod light;
