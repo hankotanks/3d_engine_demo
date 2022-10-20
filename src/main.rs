@@ -12,9 +12,13 @@ use winit::{
     event::WindowEvent,
 };
 
-async fn run() {
+struct SceneConfig {
+    frame_speed: f32
+}
+
+async fn run<F: 'static>(config: SceneConfig, mut mesh_update: F) where F: FnMut(&mut mesh::Mesh) {
     // Contains all of the scene's geometry
-    let mesh = mesh::Mesh::default();
+    let mut mesh = mesh::Mesh::default();
 
     // TODO: Not sure if this should be a member of State or remain separate
     let mut camera_controller = camera::CameraController::new(0.025, 0.6);
@@ -25,9 +29,12 @@ async fn run() {
     // Contains ALL of the engine's mutable state
     let mut state = state::State::new(&window).await;
 
+    let frame_update_speed = config.frame_speed.recip() as i32;
+    let mut frame_update_count = 0;
+    
     event_loop.run(move |event, _, control_flow| {
         match event {
-            event::Event::RedrawRequested(w_id) if w_id == window.id() => {
+            event::Event::RedrawRequested(w_id) if w_id == window.id() => {                
                 state.update(&mesh);
 
                 match state.render() {
@@ -89,11 +96,24 @@ async fn run() {
             // Unhandled events
             _ => {  }
         }
+
+        if frame_update_count == frame_update_speed {
+            mesh_update(&mut mesh);
+            frame_update_count = 0;
+        } else {
+            frame_update_count += 1;
+        }
     });
 }
 
+fn test(mesh: &mut mesh::Mesh) {
+    let color = mesh.objects[0].color();
+    mesh.objects[0].set_color([color[1], color[2], color[0]]);
+}
+
 fn main() {
+    let config = SceneConfig { frame_speed: 0.01 };
     pollster::block_on(
-        run()
+        run(config, test)
     );
 }

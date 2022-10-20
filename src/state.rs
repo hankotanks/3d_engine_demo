@@ -1,5 +1,6 @@
-use wgpu::util::DeviceExt;
 use winit::window;
+
+use wgpu::util::DeviceExt;
 
 use crate::{
     camera,

@@ -1,4 +1,4 @@
-mod objects;
+pub mod objects;
 
 use objects::MeshObject;
 use objects::Cube;
@@ -22,7 +22,7 @@ impl Mesh {
         let mut vertices = Vec::new();
         let mut indices = Vec::new();
         for object in self.objects.iter() {
-            let mut data = object.data();
+            let mut data = object.build_object_data();
 
             let mut offset_indices = data.indices
                 .iter()

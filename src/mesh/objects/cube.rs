@@ -11,7 +11,6 @@ use super::{
 
 use crate::vertex::Vertex;
 
-
 pub struct Cube {
     pub position: Point3<isize>,
     pub color: [f32; 3]
@@ -24,7 +23,7 @@ impl Default for Cube {
 }
 
 impl MeshObject for Cube {
-    fn data(&self) -> MeshObjectData {
+    fn build_object_data(&self) -> MeshObjectData {
         let center = Point3::new(
             self.position.x as f32, 
             self.position.y as f32, 
@@ -116,5 +115,21 @@ impl MeshObject for Cube {
         ];
 
         MeshObjectData { vertices, indices }
+    }
+
+    fn color(&self) -> [f32; 3] {
+        self.color
+    }
+
+    fn set_color(&mut self, color: [f32; 3]) {
+        self.color = color;
+    }
+
+    fn position(&self) -> Point3<isize> {
+        self.position
+    }
+
+    fn set_position(&mut self, position: Point3<isize>) {
+        self.position = position;
     }
 }
