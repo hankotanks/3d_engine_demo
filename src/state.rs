@@ -1,7 +1,7 @@
 use wgpu::util::DeviceExt;
 use winit::window;
 
-use crate::{camera::{Camera, CameraUniform}, vertex::Vertex, mesh::Mesh, light::LightUniform, texture};
+use crate::{camera::{Camera, CameraUniform}, vertex::Vertex, mesh::Mesh, light::LightUniform, depth_texture};
 
 
 pub struct State {
@@ -181,7 +181,7 @@ impl State {
             wgpu::include_wgsl!("shader.wgsl")
         );    
 
-        let depth_texture_view = texture::create_depth_texture(&device, &config);
+        let depth_texture_view = depth_texture::create_depth_texture(&device, &config);
 
         let render_pipeline_layout = device.create_pipeline_layout(
             &wgpu::PipelineLayoutDescriptor {
@@ -228,7 +228,7 @@ impl State {
                     conservative: false
                 },
                 depth_stencil: Some(wgpu::DepthStencilState {
-                    format: texture::DEPTH_FORMAT,
+                    format: depth_texture::DEPTH_FORMAT,
                     depth_write_enabled: true,
                     depth_compare: wgpu::CompareFunction::Less,
                     stencil: wgpu::StencilState::default(),
@@ -270,7 +270,7 @@ impl State {
             self.config.width = new_size.width;
             self.config.height = new_size.height;
 
-            self.depth_texture_view = texture::create_depth_texture(&self.device, &self.config);
+            self.depth_texture_view = depth_texture::create_depth_texture(&self.device, &self.config);
 
             self.surface.configure(&self.device, &self.config);
         }

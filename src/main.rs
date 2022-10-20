@@ -5,7 +5,7 @@ mod camera;
 mod camera_controller;
 mod light;
 mod vertex;
-mod texture;
+mod depth_texture;
 
 use camera_controller::CameraController;
 use mesh::Mesh;
