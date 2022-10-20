@@ -6,7 +6,7 @@ use crate::{
     camera,
     vertex::Vertex,
     mesh,
-    light,
+    light::LightUniform,
     depth_texture::create_depth_texture
 };
 
@@ -23,7 +23,7 @@ pub struct State {
     pub camera_uniform: camera::CameraUniform,
     pub camera_buffer: wgpu::Buffer,
     pub camera_bind_group: wgpu::BindGroup,
-    pub light_uniform: light::LightUniform,
+    pub light_uniform: LightUniform,
     pub light_buffer: wgpu::Buffer,
     pub light_bind_group: wgpu::BindGroup,
     pub depth_texture_view: wgpu::TextureView,
@@ -138,15 +138,15 @@ impl State {
             }
         ) };
 
-        let lights = light::Lights {
-            light_count: 0,
-            light_uniforms: [light::LightUniform::default(); light::MAX_LIGHT_UNIFORMS],
+        let light_uniform = LightUniform {
+            position: [2.0, 6.0, 4.0, 1.0],
+            color: [1.0, 1.0, 1.0, 0.1]
         };
 
         let light_buffer = device.create_buffer_init(
             &wgpu::util::BufferInitDescriptor {
                 label: None,
-                contents: bytemuck::cast_slice(&[lights]),
+                contents: bytemuck::cast_slice(&[light_uniform]),
                 usage: { 
                     wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST
                 },
