@@ -11,8 +11,12 @@ struct LightUniform {
     color: vec4<f32>
 }
 
+struct Lights {
+    light_uniforms: array<LightUniform>
+}
+
 @group(1) @binding(0)
-var<uniform> light: LightUniform;
+var<storage, read> lights: Lights;
 
 struct VertexInput {
     @location(0) position: vec3<f32>,
