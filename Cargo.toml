@@ -10,3 +10,11 @@ bytemuck = { version = "1.4", features = [ "derive" ] }
 cgmath = "0.18"
 pollster = "0.2"
 common_macros = "0.1.1"
+
+[[bin]]
+name = "block_engine_wgpu"
+path = "src/main.rs"
+
+[lib]
+name = "block_engine_wgpu"
+path = "src/lib/mod.rs"
