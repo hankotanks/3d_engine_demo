@@ -11,8 +11,12 @@ struct LightUniform {
     color: vec4<f32>
 }
 
-@group(1) @binding(0)
-var<uniform> light: LightUniform;
+struct LightSources {
+    light_uniforms: array<LightUniform>
+}
+
+@group(1) @binding(0) 
+var<storage, read> light_sources: LightSources;
 
 struct VertexInput {
     @location(0) position: vec3<f32>,
@@ -40,16 +44,26 @@ fn vs_main(model: VertexInput) -> VertexOutput {
 
 @fragment
 fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
-    let ambient_color = light.color.xyz * light.color.a;
-    let light_dir = normalize(light.position.xyz - in.world_position);
-    let diffuse_strength = max(dot(in.world_normal, light_dir), 0.0);
-    let diffuse_color = light.color.xyz * diffuse_strength;
-    let view_dir = normalize(camera.position.xyz - in.world_position);
-    let reflect_dir = reflect(-light_dir, in.world_normal);
-    let specular_strength = pow(max(dot(view_dir, reflect_dir), 0.0), 32.0);
-    let specular_color = light.color.xyz * specular_strength;
+    var result = vec3<f32>(0.0, 0.0, 0.0);
 
-    let result = (ambient_color + diffuse_color + specular_color) * in.color;
+    let length = i32(arrayLength(&light_sources.light_uniforms));
+    for(var i: i32 = 0; i < length; i = i + 1) {
+        if(light_sources.light_uniforms[i].color.a != 0.0) {
+            let ambient_color = light_sources.light_uniforms[i].color.xyz * light_sources.light_uniforms[i].color.a;
+            let light_dir = normalize(light_sources.light_uniforms[i].position.xyz - in.world_position);
+            let diffuse_strength = max(dot(in.world_normal, light_dir), 0.0);
+            let diffuse_color = light_sources.light_uniforms[i].color.xyz * diffuse_strength;
+            let view_dir = normalize(camera.position.xyz - in.world_position);
+            let reflect_dir = reflect(-light_dir, in.world_normal);
+            let specular_strength = pow(max(dot(view_dir, reflect_dir), 0.0), 32.0);
+            let specular_color = light_sources.light_uniforms[i].color.xyz * specular_strength;
+
+            result += ambient_color + diffuse_color + specular_color;
+        }
+    }
+    
+
+    result *= in.color;
 
     return vec4<f32>(result, 1.0);
 }

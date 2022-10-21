@@ -6,7 +6,7 @@ use crate::{
     camera,
     vertex::Vertex,
     mesh,
-    light::LightUniform,
+    light,
     depth_texture::create_depth_texture
 };
 
@@ -23,9 +23,9 @@ pub struct State {
     pub camera_uniform: camera::CameraUniform,
     pub camera_buffer: wgpu::Buffer,
     pub camera_bind_group: wgpu::BindGroup,
-    pub light_uniform: LightUniform,
-    pub light_buffer: wgpu::Buffer,
-    pub light_bind_group: wgpu::BindGroup,
+    pub lighting: light::LightSources,
+    pub lighting_buffer: wgpu::Buffer,
+    pub lighting_bind_group: wgpu::BindGroup,
     pub depth_texture_view: wgpu::TextureView,
     pub render_pipeline: wgpu::RenderPipeline
 }
@@ -138,22 +138,24 @@ impl State {
             }
         ) };
 
-        let light_uniform = LightUniform {
-            position: [2.0, 6.0, 4.0, 1.0],
-            color: [1.0, 1.0, 1.0, 0.1]
+        let lighting = light::LightSources {
+            light_uniforms: [
+                light::LightUniform::default(); 
+                light::MAX_LIGHT_SOURCES
+            ]
         };
 
-        let light_buffer = device.create_buffer_init(
+        let lighting_buffer = device.create_buffer_init(
             &wgpu::util::BufferInitDescriptor {
                 label: None,
-                contents: bytemuck::cast_slice(&[light_uniform]),
+                contents: bytemuck::cast_slice(&[lighting]),
                 usage: { 
-                    wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST
+                    wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_DST
                 },
             }
         );
 
-        let light_bind_group_layout = { 
+        let lighting_bind_group_layout = { 
             device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
                 entries: &[
                     wgpu::BindGroupLayoutEntry {
@@ -161,7 +163,7 @@ impl State {
                         visibility: wgpu::ShaderStages::VERTEX 
                             | wgpu::ShaderStages::FRAGMENT,
                         ty: wgpu::BindingType::Buffer {
-                            ty: wgpu::BufferBindingType::Uniform,
+                            ty: wgpu::BufferBindingType::Storage { read_only: true },
                             has_dynamic_offset: false,
                             min_binding_size: None,
                         },
@@ -172,13 +174,13 @@ impl State {
             }
         ) };
 
-        let light_bind_group = { 
+        let lighting_bind_group = { 
             device.create_bind_group(&wgpu::BindGroupDescriptor {
-                layout: &light_bind_group_layout,
+                layout: &lighting_bind_group_layout,
                 entries: &[
                     wgpu::BindGroupEntry {
                         binding: 0,
-                        resource: light_buffer.as_entire_binding(),
+                        resource: lighting_buffer.as_entire_binding(),
                     }
                 ],
                 label: None
@@ -196,7 +198,7 @@ impl State {
                 label: None,
                 bind_group_layouts: &[
                     &camera_bind_group_layout,
-                    &light_bind_group_layout
+                    &lighting_bind_group_layout
                 ],
                 push_constant_ranges: &[]
             }
@@ -264,9 +266,9 @@ impl State {
             camera_uniform,
             camera_buffer,
             camera_bind_group,
-            light_uniform,
-            light_buffer,
-            light_bind_group,
+            lighting,
+            lighting_buffer,
+            lighting_bind_group,
             depth_texture_view,
             render_pipeline
         }
@@ -305,17 +307,36 @@ impl State {
             bytemuck::cast_slice(&[self.camera_uniform])
         );
 
-        self.light_uniform.position = [
-            self.camera_uniform.position[0],
-            self.camera_uniform.position[1],
-            self.camera_uniform.position[2],
-            1.0
-        ];
+        /* 
+         * TODO: LightSources doesn't need to be updated every frame, 
+         *       only when adding/removing 
+         */
+        let mut light_count = 0;
+        for object in mesh.objects.iter() {
+            if let Some(emission) = object.emission() {
+                let pos = object.position();
+                let pos = cgmath::Point3::new(
+                    pos.x as f32, 
+                    pos.y as f32, 
+                    pos.z as f32
+                );
+
+                self.lighting.light_uniforms[light_count].color = emission;
+                self.lighting.light_uniforms[light_count].position = [
+                    pos.x, 
+                    pos.y, 
+                    pos.z, 
+                    1.0
+                ];
+
+                light_count += 1;               
+            }
+        }
 
         self.queue.write_buffer(
-            &self.light_buffer, 
+            &self.lighting_buffer, 
             0, 
-            bytemuck::cast_slice(&[self.light_uniform])
+            bytemuck::cast_slice(&[self.lighting])
         );
     }
 
@@ -365,7 +386,7 @@ impl State {
 
             // Camera and light bind groups
             render_pass.set_bind_group(0, &self.camera_bind_group, &[]);
-            render_pass.set_bind_group(1, &self.light_bind_group, &[]);
+            render_pass.set_bind_group(1, &self.lighting_bind_group, &[]);
 
             // Set vertex and index buffers
             render_pass.set_vertex_buffer(
