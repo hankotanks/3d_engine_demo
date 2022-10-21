@@ -1,18 +1,26 @@
 pub mod objects;
 
+use std::ops::Index;
+use std::ops::IndexMut;
+
 use objects::MeshObject;
-use objects::Cube;
 use wgpu::util::DeviceExt;
 
+#[derive(Default)]
 pub struct Mesh {
     pub(crate) objects: Vec<Box<dyn MeshObject>>
 }
 
-impl Default for Mesh {
-    fn default() -> Self {
-        Self {
-            objects: vec![Box::new(Cube::default())]
-        }
+impl Index<usize> for Mesh {
+    type Output = Box<dyn MeshObject>;
+    fn index(&self, i: usize) -> &Self::Output {
+        &self.objects[i]
+    }
+}
+
+impl IndexMut<usize> for Mesh {
+    fn index_mut(&mut self, i: usize) -> &mut Box<dyn MeshObject> {
+        &mut self.objects[i]
     }
 }
 

@@ -2,7 +2,8 @@ use cgmath::Point3;
 
 use super::{
     MeshObject, 
-    MeshObjectData, private
+    MeshObjectData, 
+    private
 };
 
 use crate::Vertex;
@@ -59,6 +60,7 @@ impl MeshObject for Cube {
         None
     }
 
+    #[allow(unused_variables)]
     fn set_emission_strength(&mut self, emission_strength: f32) {  }
 }
 

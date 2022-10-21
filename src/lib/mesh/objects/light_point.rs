@@ -52,10 +52,8 @@ impl MeshObject for LightPoint {
 
 impl private::MeshObject for LightPoint {
     fn build_object_data(&self) -> MeshObjectData {
-        let mut temp = Cube::default();
-        temp.position = self.position;
+        let mut temp = Cube::new(self.position, self.color);
         temp.hw *= 0.5;
-        temp.color = self.color;
         
         let mut data = temp.build_object_data();
 

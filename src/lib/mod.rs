@@ -16,14 +16,14 @@ pub struct SceneConfig {
     pub frame_speed: f32
 }
 
-pub async fn run<F: 'static, G: 'static>(config: SceneConfig, mut mesh_initialize: F, mut mesh_update: G) 
+pub async fn run<F: 'static, G: 'static>(config: SceneConfig, mut mesh_init: F, mut mesh_update: G) 
     where F: FnMut(&mut mesh::Mesh), G: FnMut(&mut mesh::Mesh) {
 
     // Contains all of the scene's geometry
     let mut mesh = mesh::Mesh::default();
 
     // Initialize the mesh
-    mesh_initialize(&mut mesh);
+    mesh_init(&mut mesh);
 
     // TODO: Not sure if this should be a member of State or remain separate
     let mut camera_controller = camera::CameraController::new(0.025, 0.6);
