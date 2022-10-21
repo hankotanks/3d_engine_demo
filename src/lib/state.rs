@@ -9,24 +9,24 @@ use crate::{
     light
 };
 
-pub struct State {
-    pub size: winit::dpi::PhysicalSize<u32>,
-    pub surface: wgpu::Surface,
-    pub device: wgpu::Device,
-    pub queue: wgpu::Queue,
-    pub config: wgpu::SurfaceConfiguration,
-    pub vertex_buffer: wgpu::Buffer,
-    pub index_buffer: wgpu::Buffer,
-    pub index_count: u32,
-    pub camera: camera::Camera,
-    pub camera_uniform: camera::CameraUniform,
-    pub camera_buffer: wgpu::Buffer,
-    pub camera_bind_group: wgpu::BindGroup,
-    pub lighting: light::LightSources,
-    pub lighting_buffer: wgpu::Buffer,
-    pub lighting_bind_group: wgpu::BindGroup,
-    pub depth_texture_view: wgpu::TextureView,
-    pub render_pipeline: wgpu::RenderPipeline
+pub(crate) struct State {
+    pub(crate) size: winit::dpi::PhysicalSize<u32>,
+    pub(crate) surface: wgpu::Surface,
+    pub(crate) device: wgpu::Device,
+    pub(crate) queue: wgpu::Queue,
+    pub(crate) config: wgpu::SurfaceConfiguration,
+    pub(crate) vertex_buffer: wgpu::Buffer,
+    pub(crate) index_buffer: wgpu::Buffer,
+    pub(crate) index_count: u32,
+    pub(crate) camera: camera::Camera,
+    pub(crate) camera_uniform: camera::CameraUniform,
+    pub(crate) camera_buffer: wgpu::Buffer,
+    pub(crate) camera_bind_group: wgpu::BindGroup,
+    pub(crate) lighting: light::LightSources,
+    pub(crate) lighting_buffer: wgpu::Buffer,
+    pub(crate) lighting_bind_group: wgpu::BindGroup,
+    pub(crate) depth_texture_view: wgpu::TextureView,
+    pub(crate) render_pipeline: wgpu::RenderPipeline
 }
 
 impl State {
@@ -312,7 +312,7 @@ impl State {
          */
         let mut light_count = 0;
         for object in mesh.objects.iter() {
-            if let Some(emission) = object.emission() {
+            if let Some(emission) = object.emission_strength() {
                 let pos = object.position();
                 let pos = cgmath::Point3::new(
                     pos.x as f32, 

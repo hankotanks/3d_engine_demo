@@ -5,44 +5,12 @@ use block_engine_wgpu::{
 };
 
 fn test_mesh_initialize(mesh: &mut mesh::Mesh) {
-    mesh.objects.push(
-        Box::new(
-            mesh::objects::Cube {
-                position: [2, 0, 0].into(),
-                hw: 0.5,
-                color: [0.3, 0.3, 0.8],
-            }
-        )
+    mesh.add(
+        mesh::objects::Cube::new([0, 0, 0].into(), [0.3, 0.3, 0.8])
     );
 
-    mesh.objects.push(
-        Box::new(
-            mesh::objects::Cube {
-                position: [0, 0, 1].into(),
-                hw: 0.5,
-                color: [0.3, 0.3, 0.8],
-            }
-        )
-    );
-
-    mesh.objects.push(
-        Box::new(
-            mesh::objects::Cube {
-                position: [0, 2, 1].into(),
-                hw: 0.5,
-                color: [0.3, 0.3, 0.8],
-            }
-        )
-    );
-
-    mesh.objects.push(
-        Box::new(
-            mesh::objects::LightPoint {
-                position: [1, 1, 0].into(),
-                color: [1.0, 1.0, 1.0],
-                emission_strength: 0.01
-            }
-        )
+    mesh.add(
+        mesh::objects::LightPoint::new([0, 2, 0].into(), [1.0, 1.0, 1.0])
     );
 }
 

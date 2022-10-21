@@ -2,11 +2,10 @@ pub mod objects;
 
 use objects::MeshObject;
 use objects::Cube;
-
 use wgpu::util::DeviceExt;
 
 pub struct Mesh {
-    pub objects: Vec<Box<dyn MeshObject>>
+    pub(crate) objects: Vec<Box<dyn MeshObject>>
 }
 
 impl Default for Mesh {
@@ -18,7 +17,19 @@ impl Default for Mesh {
 }
 
 impl Mesh {
-    pub fn build_buffers(&self, device: &wgpu::Device) -> MeshBufferData {
+    pub fn add<M: 'static>(&mut self, mesh_object: M) -> bool where M: MeshObject {
+        for object in self.objects.iter() {
+            if mesh_object.position() == object.position() {
+                return false;
+            }
+        }
+
+        self.objects.push(Box::new(mesh_object));
+
+        true
+    }
+
+    pub(crate) fn build_buffers(&self, device: &wgpu::Device) -> MeshBufferData {
         let mut vertices = Vec::new();
         let mut indices = Vec::new();
         for object in self.objects.iter() {
@@ -55,8 +66,8 @@ impl Mesh {
     }
 }
 
-pub struct MeshBufferData {
-    pub vertex_buffer: wgpu::Buffer,
-    pub index_buffer: wgpu::Buffer,
-    pub index_count: u32
+pub(crate) struct MeshBufferData {
+    pub(crate) vertex_buffer: wgpu::Buffer,
+    pub(crate) index_buffer: wgpu::Buffer,
+    pub(crate) index_count: u32
 }

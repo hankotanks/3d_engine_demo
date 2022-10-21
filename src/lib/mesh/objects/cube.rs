@@ -2,15 +2,15 @@ use cgmath::Point3;
 
 use super::{
     MeshObject, 
-    MeshObjectData
+    MeshObjectData, private
 };
 
 use crate::Vertex;
 
 pub struct Cube {
-    pub position: Point3<isize>,
-    pub hw: f32,
-    pub color: [f32; 3]    
+    pub(crate) position: Point3<isize>,
+    pub(crate) hw: f32,
+    pub(crate) color: [f32; 3]    
 }
 
 impl Default for Cube {
@@ -24,15 +24,45 @@ impl Default for Cube {
 }
 
 impl Cube {
-    pub const FRONT: [f32; 3] = [0.0, 0.0, 1.0];
-    pub const BACK: [f32; 3] = [0.0, 0.0, -1.0];
-    pub const LEFT: [f32; 3] = [-1.0, 0.0, 0.0];
-    pub const RIGHT: [f32; 3] = [1.0, -0.0, 0.0];
-    pub const TOP: [f32; 3] = [0.0, 1.0, 0.0];
-    pub const BOTTOM: [f32; 3] = [-0.0, -1.0, -0.0];
+    pub(crate) const FRONT: [f32; 3] = [0.0, 0.0, 1.0];
+    pub(crate) const BACK: [f32; 3] = [0.0, 0.0, -1.0];
+    pub(crate) const LEFT: [f32; 3] = [-1.0, 0.0, 0.0];
+    pub(crate) const RIGHT: [f32; 3] = [1.0, -0.0, 0.0];
+    pub(crate) const TOP: [f32; 3] = [0.0, 1.0, 0.0];
+    pub(crate) const BOTTOM: [f32; 3] = [-0.0, -1.0, -0.0];
+}
+
+impl Cube {
+    pub fn new(position: Point3<isize>, color: [f32; 3]) -> Self {
+        Self { position, hw: 0.5, color }
+    }
 }
 
 impl MeshObject for Cube {
+    fn color(&self) -> [f32; 3] {
+        self.color
+    }
+
+    fn set_color(&mut self, color: [f32; 3]) {
+        self.color = color;
+    }
+
+    fn position(&self) -> Point3<isize> {
+        self.position
+    }
+
+    fn set_position(&mut self, position: Point3<isize>) {
+        self.position = position;
+    }
+
+    fn emission_strength(&self) -> Option<[f32; 4]> {
+        None
+    }
+
+    fn set_emission_strength(&mut self, emission_strength: f32) {  }
+}
+
+impl private::MeshObject for Cube {
     fn build_object_data(&self) -> MeshObjectData {
         let center = Point3::new(
             self.position.x as f32, 
@@ -99,25 +129,5 @@ impl MeshObject for Cube {
         ];
 
         MeshObjectData { vertices, indices }
-    }
-
-    fn color(&self) -> [f32; 3] {
-        self.color
-    }
-
-    fn set_color(&mut self, color: [f32; 3]) {
-        self.color = color;
-    }
-
-    fn position(&self) -> Point3<isize> {
-        self.position
-    }
-
-    fn set_position(&mut self, position: Point3<isize>) {
-        self.position = position;
-    }
-
-    fn emission(&self) -> Option<[f32; 4]> {
-        None
     }
 }

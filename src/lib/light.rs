@@ -1,10 +1,10 @@
-pub const MAX_LIGHT_SOURCES: usize = 64;
+pub(crate) const MAX_LIGHT_SOURCES: usize = 64;
 
 #[repr(C)]
 #[derive(Clone, Copy, bytemuck::Pod, bytemuck::Zeroable)]
-pub struct LightUniform {
-    pub position: [f32; 4],
-    pub color: [f32; 4]
+pub(crate) struct LightUniform {
+    pub(crate) position: [f32; 4],
+    pub(crate) color: [f32; 4]
 }
 
 impl Default for LightUniform {
@@ -15,6 +15,6 @@ impl Default for LightUniform {
 
 #[repr(C)]
 #[derive(Clone, Copy, bytemuck::Pod, bytemuck::Zeroable)]
-pub struct LightSources {
-    pub light_uniforms: [LightUniform; MAX_LIGHT_SOURCES]
+pub(crate) struct LightSources {
+    pub(crate) light_uniforms: [LightUniform; MAX_LIGHT_SOURCES]
 }

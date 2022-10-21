@@ -5,9 +5,9 @@ use winit::{
 
 use crate::camera::Camera;
 
-pub struct CameraController {
-    pub rotate_speed: f32,
-    pub zoom_speed: f32,
+pub(crate) struct CameraController {
+    pub(crate) rotate_speed: f32,
+    pub(crate) zoom_speed: f32,
     is_drag_rotate: bool,
 }
 
@@ -18,7 +18,7 @@ impl Default for CameraController {
 }
 
 impl CameraController {
-    pub fn new(rotate_speed: f32, zoom_speed: f32) -> Self {
+    pub(crate) fn new(rotate_speed: f32, zoom_speed: f32) -> Self {
         Self {
             rotate_speed,
             zoom_speed,
@@ -26,7 +26,7 @@ impl CameraController {
         }
     }
 
-    pub fn process_events(
+    pub(crate) fn process_events(
         &mut self,
         event: &event::DeviceEvent,
         window: &Window,
