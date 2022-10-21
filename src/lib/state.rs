@@ -2,9 +2,9 @@ use winit::window;
 
 use wgpu::util::DeviceExt;
 
-use super::{
+use crate::{
     camera,
-    vertex::Vertex,
+    Vertex,
     mesh,
     light
 };

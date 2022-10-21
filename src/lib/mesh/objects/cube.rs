@@ -5,7 +5,7 @@ use super::{
     MeshObjectData
 };
 
-use crate::vertex::Vertex;
+use crate::Vertex;
 
 pub struct Cube {
     pub position: Point3<isize>,

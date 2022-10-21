@@ -3,7 +3,7 @@ pub mod mesh;
 mod camera;
 mod light;
 mod vertex;
-mod depth_texture;
+pub(crate) use vertex::Vertex;
 
 use winit::{
     event_loop,

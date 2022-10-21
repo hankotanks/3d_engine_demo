@@ -6,7 +6,7 @@ pub use light_point::LightPoint;
 
 use cgmath::Point3;
 
-use crate::vertex::Vertex;
+use crate::Vertex;
 
 pub trait MeshObject {
     fn build_object_data(&self) -> MeshObjectData;
