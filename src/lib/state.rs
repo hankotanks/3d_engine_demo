@@ -306,29 +306,19 @@ impl State {
             bytemuck::cast_slice(&[self.camera_uniform])
         );
 
-        /* 
-         * TODO: LightSources doesn't need to be updated every frame, 
-         *       only when adding/removing 
-         */
+        // Update light sources
         let mut light_count = 0;
         for object in mesh.objects.iter() {
-            if let Some(emission) = object.emission_strength() {
-                let pos = object.position();
-                let pos = cgmath::Point3::new(
-                    pos.x as f32, 
-                    pos.y as f32, 
-                    pos.z as f32
-                );
-
-                self.lighting.light_uniforms[light_count].color = emission;
+            if let Some(emitter) = object.emitter() {
+                self.lighting.light_uniforms[light_count].color = emitter.get();
                 self.lighting.light_uniforms[light_count].position = [
-                    pos.x, 
-                    pos.y, 
-                    pos.z, 
+                    object.position().x as f32,
+                    object.position().y as f32,
+                    object.position().z as f32,
                     1.0
                 ];
 
-                light_count += 1;               
+                light_count += 1;
             }
         }
 
@@ -337,6 +327,7 @@ impl State {
             0, 
             bytemuck::cast_slice(&[self.lighting])
         );
+        // Finish updating light sources
     }
 
     pub fn render(&mut self) -> Result<(), wgpu::SurfaceError> {

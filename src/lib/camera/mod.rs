@@ -20,7 +20,7 @@ pub(crate) struct Camera {
 impl Camera {
     const FOV: f32 = 45.0;
     const ZNEAR: f32 = 0.1;
-    const ZFAR: f32 = 100.0;
+    const ZFAR: f32 = 1000.0;
 
     const MATRIX_CORRECTION_FOR_WGPU: Matrix4<f32> = Matrix4::new(
         1.0, 0.0, 0.0, 0.0,

@@ -3,7 +3,8 @@ use cgmath::Point3;
 use super::{
     MeshObject, 
     MeshObjectData, 
-    private
+    private, 
+    Emitter
 };
 
 use crate::Vertex;
@@ -11,7 +12,8 @@ use crate::Vertex;
 pub struct Cube {
     pub(crate) position: Point3<isize>,
     pub(crate) hw: f32,
-    pub(crate) color: [f32; 3]    
+    pub(crate) color: [f32; 3],
+    pub(crate) emitter: Option<Emitter>
 }
 
 impl Default for Cube {
@@ -20,6 +22,7 @@ impl Default for Cube {
             position: [0, 0, 0].into(), 
             hw: 0.5,
             color: [0.3, 0.3, 0.8],
+            emitter: None
         }
     }
 }
@@ -35,7 +38,7 @@ impl Cube {
 
 impl Cube {
     pub fn new(position: Point3<isize>, color: [f32; 3]) -> Self {
-        Self { position, hw: 0.5, color }
+        Self { position, hw: 0.5, color, emitter: None }
     }
 }
 
@@ -56,12 +59,13 @@ impl MeshObject for Cube {
         self.position = position;
     }
 
-    fn emission_strength(&self) -> Option<[f32; 4]> {
-        None
+    fn emitter(&self) -> Option<Emitter> {
+        self.emitter
     }
 
-    #[allow(unused_variables)]
-    fn set_emission_strength(&mut self, emission_strength: f32) {  }
+    fn set_emitter(&mut self, emitter: Option<Emitter>) {
+        self.emitter = emitter;
+    }
 }
 
 impl private::MeshObject for Cube {
@@ -83,42 +87,63 @@ impl private::MeshObject for Cube {
             [ center.x + self.hw, center.y + self.hw, center.z - self.hw ]
         ];
 
+        let normals;
+        if self.emitter.is_none() {
+            normals = [
+                Self::FRONT, 
+                Self::BACK, 
+                Self::LEFT, 
+                Self::RIGHT, 
+                Self::TOP, 
+                Self::BOTTOM
+            ];
+        } else {
+            normals = [
+                Self::BACK,
+                Self::FRONT,
+                Self::RIGHT,
+                Self::LEFT,
+                Self::BOTTOM,
+                Self::TOP
+            ];
+        }
+
         let vertices = vec![
             // front
-            Vertex { position: positions[0], color: self.color, normal: Self::FRONT },
-            Vertex { position: positions[2], color: self.color, normal: Self::FRONT },
-            Vertex { position: positions[1], color: self.color, normal: Self::FRONT },
-            Vertex { position: positions[3], color: self.color, normal: Self::FRONT },
+            Vertex { position: positions[0], color: self.color, normal: normals[0] },
+            Vertex { position: positions[2], color: self.color, normal: normals[0] },
+            Vertex { position: positions[1], color: self.color, normal: normals[0] },
+            Vertex { position: positions[3], color: self.color, normal: normals[0] },
 
             // back
-            Vertex { position: positions[4], color: self.color, normal: Self::BACK },
-            Vertex { position: positions[6], color: self.color, normal: Self::BACK },
-            Vertex { position: positions[5], color: self.color, normal: Self::BACK },
-            Vertex { position: positions[7], color: self.color, normal: Self::BACK },
+            Vertex { position: positions[4], color: self.color, normal: normals[1] },
+            Vertex { position: positions[6], color: self.color, normal: normals[1] },
+            Vertex { position: positions[5], color: self.color, normal: normals[1] },
+            Vertex { position: positions[7], color: self.color, normal: normals[1] },
 
             // left
-            Vertex { position: positions[4], color: self.color, normal: Self::LEFT },
-            Vertex { position: positions[5], color: self.color, normal: Self::LEFT },
-            Vertex { position: positions[0], color: self.color, normal: Self::LEFT },
-            Vertex { position: positions[1], color: self.color, normal: Self::LEFT },
+            Vertex { position: positions[4], color: self.color, normal: normals[2] },
+            Vertex { position: positions[5], color: self.color, normal: normals[2] },
+            Vertex { position: positions[0], color: self.color, normal: normals[2] },
+            Vertex { position: positions[1], color: self.color, normal: normals[2] },
 
             // right
-            Vertex { position: positions[6], color: self.color, normal: Self::RIGHT },
-            Vertex { position: positions[7], color: self.color, normal: Self::RIGHT },
-            Vertex { position: positions[2], color: self.color, normal: Self::RIGHT },
-            Vertex { position: positions[3], color: self.color, normal: Self::RIGHT },
+            Vertex { position: positions[6], color: self.color, normal: normals[3] },
+            Vertex { position: positions[7], color: self.color, normal: normals[3] },
+            Vertex { position: positions[2], color: self.color, normal: normals[3] },
+            Vertex { position: positions[3], color: self.color, normal: normals[3] },
 
             // top
-            Vertex { position: positions[5], color: self.color, normal: Self::TOP },
-            Vertex { position: positions[1], color: self.color, normal: Self::TOP },
-            Vertex { position: positions[7], color: self.color, normal: Self::TOP },
-            Vertex { position: positions[3], color: self.color, normal: Self::TOP },
+            Vertex { position: positions[5], color: self.color, normal: normals[4] },
+            Vertex { position: positions[1], color: self.color, normal: normals[4] },
+            Vertex { position: positions[7], color: self.color, normal: normals[4] },
+            Vertex { position: positions[3], color: self.color, normal: normals[4] },
 
             // bottom
-            Vertex { position: positions[4], color: self.color, normal: Self::BOTTOM },
-            Vertex { position: positions[0], color: self.color, normal: Self::BOTTOM },
-            Vertex { position: positions[6], color: self.color, normal: Self::BOTTOM },
-            Vertex { position: positions[2], color: self.color, normal: Self::BOTTOM }
+            Vertex { position: positions[4], color: self.color, normal: normals[5] },
+            Vertex { position: positions[0], color: self.color, normal: normals[5] },
+            Vertex { position: positions[6], color: self.color, normal: normals[5] },
+            Vertex { position: positions[2], color: self.color, normal: normals[5] }
         ];
 
         let indices = vec![
