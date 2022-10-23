@@ -1,5 +1,7 @@
 pub mod objects;
 
+use std::ops::Deref;
+use std::ops::DerefMut;
 use std::ops::Index;
 use std::ops::IndexMut;
 
@@ -21,6 +23,20 @@ impl Index<usize> for Mesh {
 impl IndexMut<usize> for Mesh {
     fn index_mut(&mut self, i: usize) -> &mut Box<dyn MeshObject> {
         &mut self.objects[i]
+    }
+}
+
+impl Deref for Mesh {
+    type Target = Vec<Box<dyn MeshObject>>;
+
+    fn deref(&self) -> &Self::Target {
+        &self.objects
+    }
+}
+
+impl DerefMut for Mesh {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.objects
     }
 }
 
