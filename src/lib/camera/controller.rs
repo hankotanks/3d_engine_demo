@@ -3,7 +3,7 @@ use winit::{
     window::Window
 };
 
-use crate::camera::Camera;
+use super::Camera;
 
 pub(crate) struct CameraController {
     pub(crate) rotate_speed: f32,

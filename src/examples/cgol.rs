@@ -1,9 +1,25 @@
-use block_engine_wgpu::mesh::{Mesh, objects::{self, MeshObject}};
+use block_engine_wgpu::{mesh::{Mesh, objects::{self, MeshObject}}, Config, camera::CameraConfig};
 use cgmath::Point3;
 use rand::Rng;
 
 const DIMENSIONS: (usize, usize) = (31, 31);
 const INIT_DENSITY: f64 = 0.5;
+
+pub const CGOL_CONFIG: Config = Config {
+    frame_speed: 0.05,
+    camera_config: CameraConfig { 
+        target: Point3::new(
+            (DIMENSIONS.0 / 2) as isize,
+            1isize,
+            (DIMENSIONS.1 / 2) as isize
+        ),
+        zoom_speed: 0.6,
+        rotate_speed: 0.025,
+        distance: (DIMENSIONS.0 + DIMENSIONS.1) as f32,
+        pitch: 1.5,
+        yaw: 0.0, 
+    },
+};
 
 fn neighbors(living_cells: &Vec<Point3<isize>>, target: Point3<isize>) -> usize {
     let offsets: [[isize; 3]; 8] = [
@@ -26,7 +42,7 @@ fn neighbors(living_cells: &Vec<Point3<isize>>, target: Point3<isize>) -> usize 
 
 fn redraw(mesh: &mut Mesh) {
     mesh.clear();
-    
+
     let light_position = Point3::new(
         (DIMENSIONS.0 / 2) as isize,
         -5,

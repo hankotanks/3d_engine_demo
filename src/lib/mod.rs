@@ -1,6 +1,6 @@
 mod state;
 pub mod mesh;
-mod camera;
+pub mod camera;
 mod light;
 mod vertex;
 pub(crate) use vertex::Vertex;
@@ -12,11 +12,13 @@ use winit::{
     event::WindowEvent,
 };
 
-pub struct SceneConfig {
-    pub frame_speed: f32
+#[derive(Clone, Copy)]
+pub struct Config {
+    pub frame_speed: f32,
+    pub camera_config: camera::CameraConfig
 }
 
-pub async fn run<F: 'static, G: 'static>(config: SceneConfig, mut mesh_init: F, mut mesh_update: G) 
+pub async fn run<F: 'static, G: 'static>(config: Config, mut mesh_init: F, mut mesh_update: G) 
     where F: FnMut(&mut mesh::Mesh), G: FnMut(&mut mesh::Mesh) {
 
     // Contains all of the scene's geometry
@@ -26,13 +28,15 @@ pub async fn run<F: 'static, G: 'static>(config: SceneConfig, mut mesh_init: F, 
     mesh_init(&mut mesh);
 
     // TODO: Not sure if this should be a member of State or remain separate
-    let mut camera_controller = camera::CameraController::new(0.025, 0.6);
+    let mut camera_controller = camera::CameraController::new(
+        config.camera_config.rotate_speed, config.camera_config.zoom_speed
+    );
 
     let event_loop = event_loop::EventLoop::new();
     let window = WindowBuilder::new().build(&event_loop).unwrap();
 
     // Contains ALL of the engine's mutable state
-    let mut state = state::State::new(&window).await;
+    let mut state = state::State::new(&window, config).await;
 
     let frame_update_speed = config.frame_speed.recip() as i32;
     let mut frame_update_count = 0;

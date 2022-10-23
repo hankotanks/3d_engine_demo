@@ -4,8 +4,18 @@ pub(crate) use controller::CameraController;
 use cgmath::{
     Point3,
     Matrix4, 
-    SquareMatrix
+    SquareMatrix, Vector3
 };
+
+#[derive(Clone, Copy)]
+pub struct CameraConfig {
+    pub target: Point3<isize>,
+    pub distance: f32,
+    pub pitch: f32,
+    pub yaw: f32,
+    pub zoom_speed: f32,
+    pub rotate_speed: f32
+}
 
 pub(crate) struct Camera {
     pub(crate) distance: f32,
@@ -65,12 +75,33 @@ impl Default for Camera {
 }
 
 impl Camera {
+    pub(crate) fn new(camera_config: CameraConfig) -> Self {
+        let mut camera = Self {
+            distance: camera_config.distance,
+            eye: [0.0; 3].into(),
+            target: [
+                camera_config.target.x as f32,
+                camera_config.target.y as f32,
+                camera_config.target.z as f32
+            ].into(),
+            pitch: camera_config.pitch,
+            yaw: camera_config.yaw,
+            aspect: 1.0,
+            bounds: CameraBounds::default(),
+        };
+
+        camera.update();
+        camera
+    }
+
     pub(crate) fn update(&mut self) {
         self.eye = Point3::new(
             self.distance * self.yaw.sin() * self.pitch.cos(),
             self.distance * self.pitch.sin(),
             self.distance * self.yaw.cos() * self.pitch.cos()
         );
+
+        self.eye += Vector3::new(self.target.x, self.target.y, self.target.z);
     }
 
     pub(crate) fn set_distance(&mut self, distance: f32) {

@@ -6,7 +6,8 @@ use crate::{
     camera,
     Vertex,
     mesh,
-    light
+    light, 
+    Config
 };
 
 pub(crate) struct State {
@@ -14,7 +15,7 @@ pub(crate) struct State {
     pub(crate) surface: wgpu::Surface,
     pub(crate) device: wgpu::Device,
     pub(crate) queue: wgpu::Queue,
-    pub(crate) config: wgpu::SurfaceConfiguration,
+    pub(crate) surface_config: wgpu::SurfaceConfiguration,
     pub(crate) vertex_buffer: wgpu::Buffer,
     pub(crate) index_buffer: wgpu::Buffer,
     pub(crate) index_count: u32,
@@ -30,7 +31,7 @@ pub(crate) struct State {
 }
 
 impl State {
-    pub async fn new(window: &window::Window) -> Self {
+    pub async fn new(window: &window::Window, config: Config) -> Self {
         let size = window.inner_size();
 
         let instance = wgpu::Instance::new(wgpu::Backends::all());
@@ -62,7 +63,7 @@ impl State {
             None
         ).await.unwrap();
 
-        let config = wgpu::SurfaceConfiguration {
+        let surface_config = wgpu::SurfaceConfiguration {
             usage: wgpu::TextureUsages::RENDER_ATTACHMENT,
             format: surface.get_supported_formats(&adapter)[0],
             width: size.width,
@@ -70,7 +71,7 @@ impl State {
             present_mode: wgpu::PresentMode::Fifo
         };
 
-        surface.configure(&device, &config);
+        surface.configure(&device, &surface_config);
 
         let vertex_buffer = device.create_buffer_init(
             &wgpu::util::BufferInitDescriptor {
@@ -90,7 +91,7 @@ impl State {
 
         let index_count = 0u32;
 
-        let camera = camera::Camera::default();
+        let camera = camera::Camera::new(config.camera_config);
 
         let mut camera_uniform = camera::CameraUniform::new();
         camera_uniform.update_projection(&camera);
@@ -190,7 +191,7 @@ impl State {
             wgpu::include_wgsl!("shader.wgsl")
         );    
 
-        let depth_texture_view = create_depth_texture(&device, &config);
+        let depth_texture_view = create_depth_texture(&device, &surface_config);
 
         let render_pipeline_layout = device.create_pipeline_layout(
             &wgpu::PipelineLayoutDescriptor {
@@ -220,7 +221,7 @@ impl State {
                         entry_point: "fs_main",
                         targets: &[
                             Some(wgpu::ColorTargetState {
-                                format: config.format,
+                                format: surface_config.format,
                                 blend: Some(wgpu::BlendState::REPLACE),
                                 write_mask: wgpu::ColorWrites::ALL
                             } )
@@ -257,7 +258,7 @@ impl State {
             surface,
             device,
             queue,
-            config,
+            surface_config,
             vertex_buffer,
             index_buffer,
             index_count,
@@ -276,15 +277,15 @@ impl State {
     pub fn resize(&mut self, new_size: winit::dpi::PhysicalSize<u32>) {
         if new_size.width > 0 && new_size.height > 0 {
             self.size = new_size;
-            self.config.width = new_size.width;
-            self.config.height = new_size.height;
+            self.surface_config.width = new_size.width;
+            self.surface_config.height = new_size.height;
 
             self.depth_texture_view = create_depth_texture(
                 &self.device, 
-                &self.config
+                &self.surface_config
             );
 
-            self.surface.configure(&self.device, &self.config);
+            self.surface.configure(&self.device, &self.surface_config);
         }
     }
 
