@@ -14,7 +14,8 @@ pub struct CameraConfig {
     pub pitch: f32,
     pub yaw: f32,
     pub zoom_speed: f32,
-    pub rotate_speed: f32
+    pub rotate_speed: f32,
+    pub locked: bool
 }
 
 pub(crate) struct Camera {

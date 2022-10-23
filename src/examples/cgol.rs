@@ -17,7 +17,8 @@ pub const CGOL_CONFIG: Config = Config {
         rotate_speed: 0.025,
         distance: (DIMENSIONS.0 + DIMENSIONS.1) as f32,
         pitch: 1.5,
-        yaw: 0.0, 
+        yaw: 0.0,
+        locked: true, 
     },
 };
 

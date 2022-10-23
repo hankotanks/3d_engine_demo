@@ -94,7 +94,7 @@ pub async fn run<F: 'static, G: 'static>(config: Config, mut mesh_init: F, mut m
             },
 
             // Any mouse inputs are sent directly to the camera controller
-            event::Event::DeviceEvent { ref event, .. } => {
+            event::Event::DeviceEvent { ref event, .. } => if !config.camera_config.locked {
                 camera_controller.process_events(
                     event, 
                     &window, 
