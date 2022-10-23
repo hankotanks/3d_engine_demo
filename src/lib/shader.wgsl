@@ -49,8 +49,6 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
     let length = i32(arrayLength(&light_sources.light_uniforms));
     for(var i: i32 = 0; i < length; i = i + 1) {
         if(light_sources.light_uniforms[i].color.a != 0.0) {
-            let dist_sq: f32 = pow(distance(light_sources.light_uniforms[i].position.xyz, in.world_position), 2.0);
-
             let ambient_color = light_sources.light_uniforms[i].color.xyz * light_sources.light_uniforms[i].color.a;
             let light_dir = normalize(light_sources.light_uniforms[i].position.xyz - in.world_position);
             let diffuse_strength = max(dot(in.world_normal, light_dir), 0.0);
@@ -59,6 +57,8 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
             let reflect_dir = reflect(-light_dir, in.world_normal);
             let specular_strength = pow(max(dot(view_dir, reflect_dir), 0.0), 32.0);
             let specular_color = light_sources.light_uniforms[i].color.xyz * specular_strength;
+
+            let dist_sq: f32 = pow(distance(light_sources.light_uniforms[i].position.xyz, in.world_position), 2.0);
 
             result += (ambient_color + diffuse_color + specular_color) / dist_sq * light_sources.light_uniforms[i].color.a;
             

@@ -8,7 +8,7 @@ use crate::camera::Camera;
 pub(crate) struct CameraController {
     pub(crate) rotate_speed: f32,
     pub(crate) zoom_speed: f32,
-    is_drag_rotate: bool,
+    is_drag_rotate: bool
 }
 
 impl Default for CameraController {
@@ -22,7 +22,7 @@ impl CameraController {
         Self {
             rotate_speed,
             zoom_speed,
-            is_drag_rotate: false,
+            is_drag_rotate: false
         }
     }
 
