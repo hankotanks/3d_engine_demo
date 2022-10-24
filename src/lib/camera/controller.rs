@@ -6,22 +6,22 @@ use winit::{
 use super::Camera;
 
 pub(crate) struct CameraController {
-    pub(crate) rotate_speed: f32,
     pub(crate) zoom_speed: f32,
+    pub(crate) rotate_speed: f32,
     is_drag_rotate: bool
 }
 
 impl Default for CameraController {
     fn default() -> Self {
-        Self::new(0.025, 0.6)
+        Self::new(0.6, 0.025)
     }
 }
 
 impl CameraController {
-    pub(crate) fn new(rotate_speed: f32, zoom_speed: f32) -> Self {
+    pub(crate) fn new(zoom_speed: f32, rotate_speed: f32) -> Self {
         Self {
-            rotate_speed,
             zoom_speed,
+            rotate_speed,
             is_drag_rotate: false
         }
     }

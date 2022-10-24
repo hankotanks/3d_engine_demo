@@ -12,20 +12,23 @@ use block_engine_wgpu::{
 const DIMENSIONS: (usize, usize) = (35, 35);
 const INIT_DENSITY: f64 = 0.2;
 
+const CGOL_CONFIG_CENTER: Point3<isize> = Point3::new(
+    (DIMENSIONS.0 / 2) as isize,
+    1isize,
+    (DIMENSIONS.1 / 2) as isize);
+const CGOL_CONFIG_DISTANCE: f32 = (DIMENSIONS.0 + DIMENSIONS.1) as f32;
+
 pub const CGOL_CONFIG: Config = Config {
     frame_speed: 0.05,
     camera_config: CameraConfig { 
-        target: Point3::new(
-            (DIMENSIONS.0 / 2) as isize,
-            1isize,
-            (DIMENSIONS.1 / 2) as isize
-        ),
-        zoom_speed: 0.6,
-        rotate_speed: 0.025,
-        distance: (DIMENSIONS.0 + DIMENSIONS.1) as f32,
-        pitch: 1.5,
-        yaw: 0.0,
-        locked: true, 
+        target: Some(CGOL_CONFIG_CENTER),
+        distance: Some(CGOL_CONFIG_DISTANCE),        
+        pitch: None,
+        yaw: Some(0.0),
+        aspect: None, 
+        zoom_speed: None,
+        rotate_speed: None,
+        locked: true
     },
 };
 

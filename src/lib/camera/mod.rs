@@ -9,13 +9,29 @@ use cgmath::{
 
 #[derive(Clone, Copy)]
 pub struct CameraConfig {
-    pub target: Point3<isize>,
-    pub distance: f32,
-    pub pitch: f32,
-    pub yaw: f32,
-    pub zoom_speed: f32,
-    pub rotate_speed: f32,
+    pub target: Option<Point3<isize>>,
+    pub distance: Option<f32>,
+    pub pitch: Option<f32>,
+    pub yaw: Option<f32>,
+    pub aspect: Option<f32>,
+    pub zoom_speed: Option<f32>,
+    pub rotate_speed: Option<f32>,
     pub locked: bool
+}
+
+impl Default for CameraConfig {
+    fn default() -> Self {
+        Self { 
+            target: Some([0; 3].into()), 
+            distance: Some(2.0), 
+            pitch: Some(1.5), 
+            yaw: Some(1.25),
+            aspect: Some(1.0), 
+            zoom_speed: Some(0.6), 
+            rotate_speed: Some(0.025), 
+            locked: false
+        }
+    }
 }
 
 pub(crate) struct Camera {
@@ -77,17 +93,46 @@ impl Default for Camera {
 
 impl Camera {
     pub(crate) fn new(camera_config: CameraConfig) -> Self {
+        let default_camera_config = CameraConfig::default();
+
         let mut camera = Self {
-            distance: camera_config.distance,
+            distance: {
+                if let Some(distance) = camera_config.distance {
+                    distance
+                } else {
+                    default_camera_config.distance.unwrap()
+                }
+            },
             eye: [0.0; 3].into(),
-            target: [
-                camera_config.target.x as f32,
-                camera_config.target.y as f32,
-                camera_config.target.z as f32
-            ].into(),
-            pitch: camera_config.pitch,
-            yaw: camera_config.yaw,
-            aspect: 1.0,
+            target: {
+                let mut target = default_camera_config.target.unwrap();
+                if let Some(real_target) = camera_config.target {
+                    target = real_target;
+                }
+
+                [target.x as f32, target.y as f32, target.z as f32].into()
+            },
+            pitch: {
+                if let Some(pitch) = camera_config.pitch {
+                    pitch
+                } else {
+                    default_camera_config.pitch.unwrap()
+                }
+            },
+            yaw: {
+                if let Some(yaw) = camera_config.yaw {
+                    yaw
+                } else {
+                    default_camera_config.yaw.unwrap()
+                }
+            },
+            aspect: {
+                if let Some(aspect) = camera_config.aspect {
+                    aspect
+                } else {
+                    default_camera_config.aspect.unwrap()
+                }
+            },
             bounds: CameraBounds::default(),
         };
 

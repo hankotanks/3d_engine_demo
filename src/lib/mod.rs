@@ -3,6 +3,7 @@ pub mod mesh;
 pub mod camera;
 mod light;
 mod vertex;
+use camera::CameraConfig;
 pub(crate) use vertex::Vertex;
 
 use winit::{
@@ -29,7 +30,17 @@ pub async fn run<F: 'static, G: 'static>(config: Config, mut mesh_init: F, mut m
 
     // TODO: Not sure if this should be a member of State or remain separate
     let mut camera_controller = camera::CameraController::new(
-        config.camera_config.rotate_speed, config.camera_config.zoom_speed
+        if let Some(zoom_speed) = config.camera_config.zoom_speed {
+            zoom_speed
+        } else {
+            CameraConfig::default().zoom_speed.unwrap()
+        }, 
+
+        if let Some(rotate_speed) = config.camera_config.rotate_speed {
+            rotate_speed
+        } else {
+            CameraConfig::default().rotate_speed.unwrap()
+        }, 
     );
 
     let event_loop = event_loop::EventLoop::new();
