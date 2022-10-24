@@ -35,13 +35,10 @@ pub const CGOL_CONFIG: Config = Config {
 fn redraw(mesh: &mut mesh::Mesh) {
     mesh.clear();
 
-    let light_position = Point3::new(
-        (DIMENSIONS.0 / 2) as isize,
-        -5,
-        (DIMENSIONS.1 / 2) as isize
-    );
-    let mut light = objects::Cube::new(light_position, [0.0; 3]);
+    let mut light_position = CGOL_CONFIG_CENTER;
+    light_position.y = -5;
 
+    let mut light = objects::Cube::new(light_position, [0.0; 3]);
     objects::MeshObject::set_emitter(
         &mut light, 
         Some([1.0, 1.0, 1.0, 5.0].into())
