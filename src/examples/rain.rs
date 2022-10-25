@@ -9,9 +9,13 @@ use cgmath::Point3;
 
 use rand::Rng;
 
+#[allow(dead_code)]
 const DIMENSIONS: usize = 11;
+
+#[allow(dead_code)]
 const HEIGHT: usize = 50;
 
+#[allow(dead_code)]
 pub const RAIN_CONFIG: Config = Config {
     fps: 30,
     camera_config: CameraConfig {
@@ -26,6 +30,7 @@ pub const RAIN_CONFIG: Config = Config {
     },
 };
 
+#[allow(dead_code)]
 pub fn rain_mesh_init(mesh: &mut Mesh) {
     let light = objects::Cube::new(
         [0, -1, 0].into(),
@@ -48,6 +53,7 @@ pub fn rain_mesh_init(mesh: &mut Mesh) {
     }
 }
 
+#[allow(dead_code)]
 pub fn rain_mesh_update(mesh: &mut Mesh) {
     for object in mesh.iter_mut().skip(1) {
         let mut position = object.position();
