@@ -1,2 +1,2 @@
 pub mod cgol;
-pub mod wave;
+pub mod rain;

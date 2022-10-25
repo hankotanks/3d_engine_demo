@@ -1,10 +1,6 @@
 mod examples;
 
-use block_engine_wgpu::{
-    run, 
-    Config, 
-    camera::CameraConfig
-};
+use block_engine_wgpu::run;
 
 /*
 use examples::cgol::{
@@ -14,20 +10,16 @@ use examples::cgol::{
 };
 */
 
-use examples::wave::{
-    wave_mesh_init,
-    wave_mesh_update
+use examples::rain::{
+    RAIN_CONFIG,
+    rain_mesh_init,
+    rain_mesh_update
 };
 
 fn main() {
-    let config = Config {
-        frame_speed: 1.0, 
-        camera_config: CameraConfig::default()
-    };
-
     pollster::block_on(run(
-        config,
-        wave_mesh_init, 
-        wave_mesh_update
+        RAIN_CONFIG,
+        rain_mesh_init, 
+        rain_mesh_update
     ));
 }

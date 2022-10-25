@@ -4,7 +4,8 @@ pub(crate) use controller::CameraController;
 use cgmath::{
     Point3,
     Matrix4, 
-    SquareMatrix, Vector3
+    SquareMatrix, 
+    EuclideanSpace
 };
 
 #[derive(Clone, Copy)]
@@ -147,7 +148,7 @@ impl Camera {
             self.distance * self.yaw.cos() * self.pitch.cos()
         );
 
-        self.eye += Vector3::new(self.target.x, self.target.y, self.target.z);
+        self.eye += self.target.to_vec();
     }
 
     pub(crate) fn set_distance(&mut self, distance: f32) {
