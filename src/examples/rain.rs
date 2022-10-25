@@ -9,14 +9,14 @@ use cgmath::Point3;
 
 use rand::Rng;
 
-const DIMENSIONS: usize = 9;
+const DIMENSIONS: usize = 11;
 const HEIGHT: usize = 40;
 
 pub const RAIN_CONFIG: Config = Config {
     frame_speed: 0.12,
     camera_config: CameraConfig {
-        target: Some(Point3::new(0, (HEIGHT / 2) as isize, 0)),
-        distance: Some(((DIMENSIONS * DIMENSIONS) + DIMENSIONS) as f32),
+        target: None,
+        distance: Some(2.0 * DIMENSIONS as f32),
         pitch: Some(-0.85),
         yaw: Some(0.85),
         aspect: None,
@@ -35,16 +35,15 @@ pub fn rain_mesh_init(mesh: &mut Mesh) {
     mesh.add(light);
     mesh[0].set_emitter(Some([1.0, 1.0, 1.0, 5.0].into()));
 
-    let mut prng = rand::thread_rng();
     for x in (DIMENSIONS as isize / -2)..(DIMENSIONS as isize / 2) {
         for z in (DIMENSIONS as isize / -2)..(DIMENSIONS as isize / 2) {
-            let y = prng.gen_range(0..HEIGHT) as isize;
- 
-            let color_intensity = prng.gen::<f32>();
+            let y = HEIGHT as isize;
+
+            let color_intensity = rand::thread_rng().gen::<f32>();
             mesh.add(objects::Cube::new(
                 [x, y, z].into(),
-                [ 0.0, color_intensity * 0.5, color_intensity]
-            )); 
+                [0.0, color_intensity * 0.5, color_intensity]
+            ));
         }
     }
 }
@@ -66,7 +65,5 @@ pub fn rain_mesh_update(mesh: &mut Mesh) {
             position.y -= 1;
             object.set_position(position);
         }
-        
     }
-
 }
