@@ -13,7 +13,7 @@ const DIMENSIONS: usize = 11;
 const HEIGHT: usize = 50;
 
 pub const RAIN_CONFIG: Config = Config {
-    frame_speed: 0.12,
+    fps: 30,
     camera_config: CameraConfig {
         target: Some(Point3::new(0, (HEIGHT as isize) / 2, 0)),
         distance: Some(DIMENSIONS as f32 + HEIGHT as f32),

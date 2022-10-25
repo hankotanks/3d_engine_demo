@@ -3,6 +3,8 @@ pub mod mesh;
 pub mod camera;
 mod light;
 mod vertex;
+use std::time;
+
 use camera::CameraConfig;
 pub(crate) use vertex::Vertex;
 
@@ -15,7 +17,7 @@ use winit::{
 
 #[derive(Clone, Copy)]
 pub struct Config {
-    pub frame_speed: f32,
+    pub fps: usize,
     pub camera_config: camera::CameraConfig
 }
 
@@ -46,17 +48,26 @@ pub async fn run<F: 'static, G: 'static>(config: Config, mut mesh_init: F, mut m
     let event_loop = event_loop::EventLoop::new();
     let window = WindowBuilder::new().build(&event_loop).unwrap();
 
-    // Contains ALL of the engine's mutable state
+    // Contains ALL of the engine's mutable state...
     let mut state = state::State::new(&window, config).await;
 
-    let frame_update_speed = config.frame_speed.recip() as i32;
-    let mut frame_update_count = 0;
-    
-    event_loop.run(move |event, _, control_flow| {
-        match event {
-            event::Event::RedrawRequested(w_id) if w_id == window.id() => {                
-                state.update(&mesh);
+    // ...except that related to frame time
+    let fps = (config.fps as f32).recip();
+    let mut accumulated_time = 0.0;
+    let mut current = time::Instant::now();
 
+    // The game loop itself
+    event_loop.run(move |event, _, control_flow| {
+        accumulated_time += current.elapsed().as_secs_f32();
+        current = time::Instant::now();
+        if accumulated_time >= fps { 
+            mesh_update(&mut mesh);
+            accumulated_time -= fps;
+        }
+
+        match event {
+            event::Event::RedrawRequested(w_id) if w_id == window.id() => {
+                state.update(&mesh);
                 match state.render() {
                     Ok(..) => {  },
                     Err(wgpu::SurfaceError::Lost) => state.redraw(),
@@ -115,13 +126,6 @@ pub async fn run<F: 'static, G: 'static>(config: Config, mut mesh_init: F, mut m
 
             // Unhandled events
             _ => {  }
-        }
-
-        if frame_update_count == frame_update_speed {
-            mesh_update(&mut mesh);
-            frame_update_count = 0;
-        } else {
-            frame_update_count += 1;
         }
     });
 }

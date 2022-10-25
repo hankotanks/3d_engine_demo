@@ -27,7 +27,7 @@ const CGOL_CONFIG_DISTANCE: f32 = (DIMENSIONS.0 + DIMENSIONS.1) as f32;
 
 #[allow(dead_code)]
 pub const CGOL_CONFIG: Config = Config {
-    frame_speed: 0.05,
+    fps: 30,
     camera_config: CameraConfig { 
         target: Some(CGOL_CONFIG_CENTER),
         distance: Some(CGOL_CONFIG_DISTANCE),        
