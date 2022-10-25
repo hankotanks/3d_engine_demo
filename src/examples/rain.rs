@@ -10,13 +10,13 @@ use cgmath::Point3;
 use rand::Rng;
 
 const DIMENSIONS: usize = 11;
-const HEIGHT: usize = 40;
+const HEIGHT: usize = 50;
 
 pub const RAIN_CONFIG: Config = Config {
     frame_speed: 0.12,
     camera_config: CameraConfig {
-        target: None,
-        distance: Some(2.0 * DIMENSIONS as f32),
+        target: Some(Point3::new(0, (HEIGHT as isize) / 2, 0)),
+        distance: Some(DIMENSIONS as f32 + HEIGHT as f32),
         pitch: Some(-0.85),
         yaw: Some(0.85),
         aspect: None,
@@ -33,7 +33,7 @@ pub fn rain_mesh_init(mesh: &mut Mesh) {
     );
 
     mesh.add(light);
-    mesh[0].set_emitter(Some([1.0, 1.0, 1.0, 5.0].into()));
+    mesh[0].set_emitter(Some([1.0, 1.0, 1.0, (HEIGHT / 10) as f32].into()));
 
     for x in (DIMENSIONS as isize / -2)..(DIMENSIONS as isize / 2) {
         for z in (DIMENSIONS as isize / -2)..(DIMENSIONS as isize / 2) {
