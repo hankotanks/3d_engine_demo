@@ -1,4 +1,5 @@
 mod examples;
+mod automata;
 
 use block_engine_wgpu::run;
 
@@ -19,8 +20,8 @@ use examples::rain::{
 
 fn main() {
     pollster::block_on(run(
-        RAIN_CONFIG,
-        rain_mesh_init, 
-        rain_mesh_update
+        CGOL_CONFIG,
+        cgol_mesh_init, 
+        cgol_mesh_update
     ));
 }
