@@ -3,10 +3,17 @@ pub mod mesh;
 pub mod camera;
 mod light;
 mod vertex;
-use std::time;
+pub(crate) use vertex::Vertex;
+pub mod automata;
+
+use automata::Automata;
 
 use camera::CameraConfig;
-pub(crate) use vertex::Vertex;
+
+use mesh::objects;
+use mesh::objects::MeshObject;
+
+use std::time;
 
 use winit::{
     event_loop,
@@ -21,14 +28,35 @@ pub struct Config {
     pub camera_config: camera::CameraConfig
 }
 
-pub async fn run<F: 'static, G: 'static>(config: Config, mut mesh_init: F, mut mesh_update: G) 
-    where F: FnMut(&mut mesh::Mesh), G: FnMut(&mut mesh::Mesh) {
+fn update_mesh_from_automata(mesh: &mut mesh::Mesh, automata: &automata::Automata) {
+    mesh.clear();
+
+    let mut light = objects::Cube::new(
+        [25, -2, 25].into(),
+        [0.0; 3]
+    );
+    light.set_emitter(Some([1.0, 1.0, 1.0, 10.0].into()));
+    mesh.add(light);
+
+    for i in 0..(automata.size.x_len * automata.size.y_len * automata.size.z_len) {
+        let point = automata.size.to_point(i);
+        if let Some(color) = automata.states[automata.cells.lock().unwrap()[i]] {
+            mesh.add(objects::Cube::new(
+                point,
+                color
+            ));
+        }
+    }
+
+}
+
+pub async fn run(config: Config, mut automata: Automata) {
 
     // Contains all of the scene's geometry
     let mut mesh = mesh::Mesh::default();
 
     // Initialize the mesh
-    mesh_init(&mut mesh);
+    update_mesh_from_automata(&mut mesh, &automata);
 
     // TODO: Not sure if this should be a member of State or remain separate
     let mut camera_controller = camera::CameraController::new(
@@ -61,7 +89,8 @@ pub async fn run<F: 'static, G: 'static>(config: Config, mut mesh_init: F, mut m
         accumulated_time += current.elapsed().as_secs_f32();
         current = time::Instant::now();
         if accumulated_time >= fps { 
-            mesh_update(&mut mesh);
+            automata.tick();
+            update_mesh_from_automata(&mut mesh, &automata);
             accumulated_time -= fps;
         }
 

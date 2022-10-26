@@ -1,4 +1,8 @@
-use std::{sync::{Arc, Mutex}, thread};
+use std::thread;
+use std::sync::{
+    Arc,
+    Mutex
+};
 
 use cgmath::Point3;
 use rand::Rng;
@@ -22,9 +26,9 @@ impl From<[usize; 3]> for Size {
 
 impl Size {
     pub fn to_point(&self, mut index: usize) -> Point3<isize> {
-        let z = (index / (self.x_len * self.y_len)) as isize;
-        index -= z as usize * self.x_len * self.y_len;
-        let y = (index / self.x_len) as isize;
+        let y = (index / (self.x_len * self.z_len)) as isize;
+        index -= y as usize * self.x_len * self.z_len;
+        let z = (index / self.x_len) as isize;
         let x = (index % self.x_len) as isize;
 
         [x, y, z].into()
@@ -35,7 +39,7 @@ impl Size {
             return None;
         }
 
-        let index = point.z as usize + point.y as usize * self.x_len + point.z as usize * self.x_len * self.y_len;
+        let index = point.x as usize + point.z as usize * self.x_len + point.y as usize * self.x_len * self.z_len;
         if index >= self.x_len * self.y_len * self.z_len {
             None
         } else {
@@ -47,28 +51,29 @@ impl Size {
 const THREAD_COUNT: usize = 4;
 
 pub struct Automata {
-    cells: Arc<Mutex<Vec<usize>>>,
-    size: Arc<Size>
+    pub cells: Arc<Mutex<Vec<usize>>>,
+    pub size: Arc<Size>,
+    pub state_function: Arc<dyn Fn(&Arc<Mutex<Vec<usize>>>, &Arc<Size>, usize) -> usize + Send + Sync>,
+    pub states: Vec<Option<[f32; 3]>>
 }
 
 impl Automata {
-    pub fn new(size: Size) -> Self {
+    pub fn new<F: 'static>(size: Size, state_function: F, states: Vec<Option<[f32; 3]>>) -> Self
+        where F: Fn(&Arc<Mutex<Vec<usize>>>, &Arc<Size>, usize) -> usize + Send + Sync + Copy {
+        let mut cells = vec![0; size.x_len * size.y_len * size.z_len];
+        
         let mut prng = rand::thread_rng();
-
-        let mut cells = Vec::new();
-        for _ in 0..(size.x_len * size.y_len * size.z_len) {
-            cells.push(prng.gen_range(0..=1));
-        }
+        for i in 0..cells.len() { cells[i] = prng.gen_range(0..states.len()); }
 
         Self {
             cells: Arc::new(Mutex::new(cells)),
-            size: Arc::new(size)
+            size: Arc::new(size),
+            state_function: Arc::new(state_function),
+            states
         }
     }
 
-    pub fn tick<F: 'static>(&mut self, cell_state: F) 
-        where F: Fn(&Arc<Mutex<Vec<usize>>>, &Arc<Size>, usize) -> usize + Send + Sync + Copy {
-
+    pub fn tick(&mut self) {
         let mut threads = Vec::new();
         for c in 0..THREAD_COUNT {
             let length = self.cells.lock().unwrap().len();
@@ -77,10 +82,11 @@ impl Automata {
 
             let cells_reference = Arc::clone(&self.cells);
             let size_reference = Arc::clone(&self.size);
+            let state_function_reference = Arc::clone(&self.state_function);
             threads.push(thread::spawn(move || {
                 let mut updated_states: Vec<(usize, usize)> = Vec::new();
                 for i in start..end {
-                    let state = cell_state(&cells_reference, &size_reference, i);
+                    let state = state_function_reference(&cells_reference, &size_reference, i);
                     if state != cells_reference.lock().unwrap()[i] {
                         updated_states.push((i, state));
                     }
@@ -95,24 +101,9 @@ impl Automata {
             updated_states.append(&mut handle.join().unwrap());
         }
 
-        *self.cells.lock().unwrap() = vec![0; self.size.x_len * self.size.y_len * self.size.z_len];
+        //*self.cells.lock().unwrap() = vec![0; self.size.x_len * self.size.y_len * self.size.z_len];
         for (index, state) in updated_states.drain(0..) {
             self.cells.lock().unwrap()[index] = state;
         }
-    }
-
-    pub fn debug_print_2d(&self) {
-        for z in 0..self.size.z_len {
-            for x in 0..self.size.x_len {
-                dbg!(self.size.to_index(Point3::new(x as isize, 0, z as isize)));
-            }
-        }
-        /*
-        for (index, cell) in self.cells.lock().unwrap().iter().enumerate() {
-            let coord = self.size.to_point(index);
-            if coord.x == 0 { println!(""); }
-            print!("{}", *cell);
-        }  */
-        println!("");
     }
 }
