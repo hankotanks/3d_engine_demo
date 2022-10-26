@@ -68,8 +68,7 @@ fn main() {
     automata.debug_print_2d();
     automata.tick(check_state);
     automata.debug_print_2d();
-    automata.tick(check_state);
-    automata.debug_print_2d();
+    
     
     /*
     pollster::block_on(run(
