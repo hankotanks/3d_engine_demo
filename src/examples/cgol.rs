@@ -37,37 +37,35 @@ fn cube_function(coord: Point3<isize>, state: usize) -> Option<Box<dyn objects::
     }
 }
 
-fn state_function(cells: &Vec<usize>, size: automata::Size, index: usize) -> usize {
+fn state_function(cells: &[usize], size: automata::Size, index: usize) -> usize {
     let target = size.to_point(index);
     let offsets: [[isize; 2]; 8] = [
-            [target.x - 1, target.z - 1],
-            [target.x - 1, target.z + 0],
-            [target.x - 1, target.z + 1],
-            [target.x + 0, target.z - 1],
-            [target.x + 0, target.z + 1],
-            [target.x + 1, target.z - 1],
-            [target.x + 1, target.z + 0],
-            [target.x + 1, target.z + 1]
-        ];
+        [target.x - 1, target.z - 1],
+        [target.x - 1, target.z],
+        [target.x - 1, target.z + 1],
+        [target.x, target.z - 1],
+        [target.x, target.z + 1],
+        [target.x + 1, target.z - 1],
+        [target.x + 1, target.z],
+        [target.x + 1, target.z + 1]
+    ];
 
-        let mut neighbor_count = 0;
-        offsets.iter().for_each(|offset| {
-            if let Some(index) = size.to_index(Point3::new(offset[0], 0, offset[1])) {
-                neighbor_count += cells[index];
-            }
-        } );
-
-        if cells[index] == 1 {
-            if neighbor_count < 2 || neighbor_count > 3 {
-                return 0;
-            } else {
-                return 1;
-            }
-        } else {
-            if neighbor_count == 3 {
-                return 1;
-            }
+    let mut neighbor_count = 0;
+    offsets.iter().for_each(|offset| {
+        if let Some(index) = size.to_index(Point3::new(offset[0], 0, offset[1])) {
+            neighbor_count += cells[index];
         }
-    
-        0
+    } );
+
+    if cells[index] == 1 {
+        if !(2..=3).contains(&neighbor_count) {
+            return 0;
+        } else {
+            return 1;
+        }
+    } else if neighbor_count == 3 {
+        return 1;
+    }
+
+    0
 }

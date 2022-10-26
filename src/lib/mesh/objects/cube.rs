@@ -87,26 +87,25 @@ impl private::MeshObject for Cube {
             [ center.x + self.hw, center.y + self.hw, center.z - self.hw ]
         ];
 
-        let normals;
-        if self.emitter.is_none() {
-            normals = [
+        let normals = if self.emitter.is_none() {
+            [
                 Self::FRONT, 
                 Self::BACK, 
                 Self::LEFT, 
                 Self::RIGHT, 
                 Self::TOP, 
                 Self::BOTTOM
-            ];
+            ]
         } else {
-            normals = [
+            [
                 Self::BACK,
                 Self::FRONT,
                 Self::RIGHT,
                 Self::LEFT,
                 Self::BOTTOM,
                 Self::TOP
-            ];
-        }
+            ]
+        };
 
         let vertices = vec![
             // front

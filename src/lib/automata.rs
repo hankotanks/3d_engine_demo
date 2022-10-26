@@ -55,19 +55,19 @@ const THREAD_COUNT: usize = 2;
 pub struct Automata {
     pub cells: Arc<Mutex<Vec<usize>>>,
     pub size: Arc<Size>,
-    pub state_function: Arc<dyn Fn(&Vec<usize>, Size, usize) -> usize + Send + Sync>,
+    pub state_function: Arc<dyn Fn(&[usize], Size, usize) -> usize + Send + Sync>,
     pub cube_function: Box<dyn Fn(Point3<isize>, usize) -> Option<Box<dyn objects::MeshObject>>>
 }
 
 impl Automata {
     pub fn new<F: 'static, G: 'static>(size: Size, state_function: F, cube_function: G) -> Self
-        where F: Fn(&Vec<usize>, Size, usize) -> usize + Send + Sync + Copy, 
+        where F: Fn(&[usize], Size, usize) -> usize + Send + Sync + Copy, 
               G: Fn(Point3<isize>, usize) -> Option<Box<dyn objects::MeshObject>> {
 
         let mut cells = vec![0; size.x_len * size.y_len * size.z_len];
         
         let mut prng = rand::thread_rng();
-        for i in 0..cells.len() { cells[i] = prng.gen_range(0..2); }
+        for cell in &mut cells { *cell = prng.gen_range(0..2); }
 
         Self {
             cells: Arc::new(Mutex::new(cells)),

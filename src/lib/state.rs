@@ -94,7 +94,7 @@ impl State {
 
         let camera = camera::Camera::new(config.camera_config);
 
-        let mut camera_controller = camera::CameraController::new(
+        let camera_controller = camera::CameraController::new(
             if let Some(zoom_speed) = config.camera_config.zoom_speed {
                 zoom_speed
             } else {
