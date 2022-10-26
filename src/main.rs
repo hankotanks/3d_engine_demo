@@ -41,7 +41,7 @@ fn check_state(cells: &Arc<Mutex<Vec<usize>>>, size: &Arc<Size>, index: usize) -
                 neighbor_count += cells.lock().unwrap()[index];
             }
         } );
-    
+
         if cells.lock().unwrap()[index] == 1 {
             if neighbor_count == 2 || neighbor_count == 3 {
                 return 1;
@@ -64,6 +64,10 @@ fn main() {
         }
     );
 
+    automata.tick(check_state);
+    automata.debug_print_2d();
+    automata.tick(check_state);
+    automata.debug_print_2d();
     automata.tick(check_state);
     automata.debug_print_2d();
     automata.tick(check_state);

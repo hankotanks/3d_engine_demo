@@ -102,12 +102,17 @@ impl Automata {
     }
 
     pub fn debug_print_2d(&self) {
-        for x in 0..self.size.x_len {
-            for z in 0..self.size.z_len {
-                print!("{}", self.cells.lock().unwrap()[self.size.to_index(Point3::new(x as isize, 0, z as isize)).unwrap()])
+        for z in 0..self.size.z_len {
+            for x in 0..self.size.x_len {
+                dbg!(self.size.to_index(Point3::new(x as isize, 0, z as isize)));
             }
-            println!("");
         }
+        /*
+        for (index, cell) in self.cells.lock().unwrap().iter().enumerate() {
+            let coord = self.size.to_point(index);
+            if coord.x == 0 { println!(""); }
+            print!("{}", *cell);
+        }  */
         println!("");
     }
 }
