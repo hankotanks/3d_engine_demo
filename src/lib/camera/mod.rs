@@ -35,6 +35,19 @@ impl Default for CameraConfig {
     }
 }
 
+pub const fn birds_eye_camera(x_len: usize, z_len: usize) -> CameraConfig {
+    CameraConfig { 
+        target: Some(Point3::new((x_len / 2) as isize, 1, (z_len / 2) as isize)),
+        distance: Some((x_len + z_len) as f32),        
+        pitch: None,
+        yaw: Some(0.0),
+        aspect: None, 
+        zoom_speed: None,
+        rotate_speed: None,
+        locked: true
+    }
+}
+
 pub(crate) struct Camera {
     pub(crate) distance: f32,
     pub(crate) eye: Point3<f32>,

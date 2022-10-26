@@ -48,18 +48,18 @@ impl Size {
     }
 }
 
-const THREAD_COUNT: usize = 4;
+const THREAD_COUNT: usize = 2;
 
 pub struct Automata {
     pub cells: Arc<Mutex<Vec<usize>>>,
     pub size: Arc<Size>,
-    pub state_function: Arc<dyn Fn(&Arc<Mutex<Vec<usize>>>, &Arc<Size>, usize) -> usize + Send + Sync>,
+    pub state_function: Arc<dyn Fn(&Vec<usize>, Size, usize) -> usize + Send + Sync>,
     pub states: Vec<Option<[f32; 3]>>
 }
 
 impl Automata {
     pub fn new<F: 'static>(size: Size, state_function: F, states: Vec<Option<[f32; 3]>>) -> Self
-        where F: Fn(&Arc<Mutex<Vec<usize>>>, &Arc<Size>, usize) -> usize + Send + Sync + Copy {
+        where F: Fn(&Vec<usize>, Size, usize) -> usize + Send + Sync + Copy {
         let mut cells = vec![0; size.x_len * size.y_len * size.z_len];
         
         let mut prng = rand::thread_rng();
@@ -77,8 +77,8 @@ impl Automata {
         let mut threads = Vec::new();
         for c in 0..THREAD_COUNT {
             let length = self.cells.lock().unwrap().len();
-            let start = length / 4 * c;
-            let end = length / 4 * (c + 1);
+            let start = length / THREAD_COUNT * c;
+            let end = length / THREAD_COUNT * (c + 1);
 
             let cells_reference = Arc::clone(&self.cells);
             let size_reference = Arc::clone(&self.size);
@@ -86,7 +86,12 @@ impl Automata {
             threads.push(thread::spawn(move || {
                 let mut updated_states: Vec<(usize, usize)> = Vec::new();
                 for i in start..end {
-                    let state = state_function_reference(&cells_reference, &size_reference, i);
+                    let state = state_function_reference(
+                        cells_reference.lock().unwrap().as_mut(), 
+                        *size_reference, 
+                        i
+                    );
+
                     if state != cells_reference.lock().unwrap()[i] {
                         updated_states.push((i, state));
                     }
