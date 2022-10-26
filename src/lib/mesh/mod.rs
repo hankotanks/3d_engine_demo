@@ -41,18 +41,6 @@ impl DerefMut for Mesh {
 }
 
 impl Mesh {
-    pub fn add<M: 'static>(&mut self, mesh_object: M) -> bool where M: MeshObject {
-        for object in self.objects.iter() {
-            if mesh_object.position() == object.position() {
-                return false;
-            }
-        }
-
-        self.objects.push(Box::new(mesh_object));
-
-        true
-    }
-
     pub(crate) fn build_buffers(&self, device: &wgpu::Device) -> MeshBufferData {
         let mut vertices = Vec::new();
         let mut indices = Vec::new();

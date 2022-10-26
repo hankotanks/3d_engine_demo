@@ -20,6 +20,7 @@ pub(crate) struct State {
     pub(crate) index_buffer: wgpu::Buffer,
     pub(crate) index_count: u32,
     pub(crate) camera: camera::Camera,
+    pub(crate) camera_controller: camera::CameraController,
     pub(crate) camera_uniform: camera::CameraUniform,
     pub(crate) camera_buffer: wgpu::Buffer,
     pub(crate) camera_bind_group: wgpu::BindGroup,
@@ -92,6 +93,20 @@ impl State {
         let index_count = 0u32;
 
         let camera = camera::Camera::new(config.camera_config);
+
+        let mut camera_controller = camera::CameraController::new(
+            if let Some(zoom_speed) = config.camera_config.zoom_speed {
+                zoom_speed
+            } else {
+                camera::CameraConfig::default().zoom_speed.unwrap()
+            }, 
+    
+            if let Some(rotate_speed) = config.camera_config.rotate_speed {
+                rotate_speed
+            } else {
+                camera::CameraConfig::default().rotate_speed.unwrap()
+            }, 
+        );
 
         let mut camera_uniform = camera::CameraUniform::new();
         camera_uniform.update_projection(&camera);
@@ -263,6 +278,7 @@ impl State {
             index_buffer,
             index_count,
             camera,
+            camera_controller,
             camera_uniform,
             camera_buffer,
             camera_bind_group,

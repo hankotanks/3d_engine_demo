@@ -7,6 +7,8 @@ use std::sync::{
 use cgmath::Point3;
 use rand::Rng;
 
+use super::mesh::objects;
+
 #[derive(Clone, Copy)]
 pub struct Size {
     pub x_len: usize,
@@ -54,22 +56,24 @@ pub struct Automata {
     pub cells: Arc<Mutex<Vec<usize>>>,
     pub size: Arc<Size>,
     pub state_function: Arc<dyn Fn(&Vec<usize>, Size, usize) -> usize + Send + Sync>,
-    pub states: Vec<Option<[f32; 3]>>
+    pub cube_function: Box<dyn Fn(Point3<isize>, usize) -> Option<Box<dyn objects::MeshObject>>>
 }
 
 impl Automata {
-    pub fn new<F: 'static>(size: Size, state_function: F, states: Vec<Option<[f32; 3]>>) -> Self
-        where F: Fn(&Vec<usize>, Size, usize) -> usize + Send + Sync + Copy {
+    pub fn new<F: 'static, G: 'static>(size: Size, state_function: F, cube_function: G) -> Self
+        where F: Fn(&Vec<usize>, Size, usize) -> usize + Send + Sync + Copy, 
+              G: Fn(Point3<isize>, usize) -> Option<Box<dyn objects::MeshObject>> {
+
         let mut cells = vec![0; size.x_len * size.y_len * size.z_len];
         
         let mut prng = rand::thread_rng();
-        for i in 0..cells.len() { cells[i] = prng.gen_range(0..states.len()); }
+        for i in 0..cells.len() { cells[i] = prng.gen_range(0..2); }
 
         Self {
             cells: Arc::new(Mutex::new(cells)),
             size: Arc::new(size),
             state_function: Arc::new(state_function),
-            states
+            cube_function: Box::new(cube_function)
         }
     }
 
@@ -106,7 +110,6 @@ impl Automata {
             updated_states.append(&mut handle.join().unwrap());
         }
 
-        //*self.cells.lock().unwrap() = vec![0; self.size.x_len * self.size.y_len * self.size.z_len];
         for (index, state) in updated_states.drain(0..) {
             self.cells.lock().unwrap()[index] = state;
         }

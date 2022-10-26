@@ -8,8 +8,6 @@ pub mod automata;
 
 use automata::Automata;
 
-use camera::CameraConfig;
-
 use mesh::objects;
 use mesh::objects::MeshObject;
 
@@ -25,29 +23,32 @@ use winit::{
 #[derive(Clone, Copy)]
 pub struct Config {
     pub fps: usize,
+    pub thread_count: usize,
     pub camera_config: camera::CameraConfig
 }
 
 fn update_mesh_from_automata(mesh: &mut mesh::Mesh, automata: &automata::Automata) {
-    mesh.clear();
+    // TODO: Need a better system for managing lights...
+    // TODO: Maybe an enum with options like Corners, Center
+    // And keep track of the number of lights
 
-    let mut light = objects::Cube::new(
-        [25, -2, 25].into(),
-        [0.0; 3]
-    );
-    light.set_emitter(Some([1.0, 1.0, 1.0, 10.0].into()));
-    mesh.add(light);
+    if mesh.len() == 0 {
+        let mut light = objects::Cube::new(
+            [(automata.size.x_len / 2) as isize, -1, (automata.size.z_len / 2) as isize].into(),
+            [0.0; 3]
+        );
+        light.set_emitter(Some([1.0, 1.0, 1.0, 10.0].into()));
+        mesh.push(Box::new(light));
+    } else {
+        mesh.truncate(1);
+    }
 
     for i in 0..(automata.size.x_len * automata.size.y_len * automata.size.z_len) {
         let point = automata.size.to_point(i);
-        if let Some(color) = automata.states[automata.cells.lock().unwrap()[i]] {
-            mesh.add(objects::Cube::new(
-                point,
-                color
-            ));
+        if let Some(object) = (automata.cube_function)(point, automata.cells.lock().unwrap()[i]) {
+            mesh.push(object)
         }
     }
-
 }
 
 pub async fn run(config: Config, mut automata: Automata) {
@@ -57,21 +58,6 @@ pub async fn run(config: Config, mut automata: Automata) {
 
     // Initialize the mesh
     update_mesh_from_automata(&mut mesh, &automata);
-
-    // TODO: Not sure if this should be a member of State or remain separate
-    let mut camera_controller = camera::CameraController::new(
-        if let Some(zoom_speed) = config.camera_config.zoom_speed {
-            zoom_speed
-        } else {
-            CameraConfig::default().zoom_speed.unwrap()
-        }, 
-
-        if let Some(rotate_speed) = config.camera_config.rotate_speed {
-            rotate_speed
-        } else {
-            CameraConfig::default().rotate_speed.unwrap()
-        }, 
-    );
 
     let event_loop = event_loop::EventLoop::new();
     let window = WindowBuilder::new().build(&event_loop).unwrap();
@@ -146,7 +132,7 @@ pub async fn run(config: Config, mut automata: Automata) {
 
             // Any mouse inputs are sent directly to the camera controller
             event::Event::DeviceEvent { ref event, .. } => if !config.camera_config.locked {
-                camera_controller.process_events(
+                state.camera_controller.process_events(
                     event, 
                     &window, 
                     &mut state.camera
