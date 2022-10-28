@@ -11,7 +11,7 @@ use automata::Automata;
 use mesh::objects;
 use mesh::objects::MeshObject;
 
-use std::time;
+use std::{time, sync::Arc, thread};
 
 use winit::{
     event_loop,
@@ -51,7 +51,7 @@ fn update_mesh_from_automata(mesh: &mut mesh::Mesh, automata: &automata::Automat
     }
 }
 
-pub async fn run(config: Config, mut automata: Automata) {
+pub async fn run(config: Config, automata: Automata) {
 
     // Contains all of the scene's geometry
     let mut mesh = mesh::Mesh::default();
@@ -75,7 +75,41 @@ pub async fn run(config: Config, mut automata: Automata) {
         accumulated_time += current.elapsed().as_secs_f32();
         current = time::Instant::now();
         if accumulated_time >= fps { 
-            automata.tick();
+            let mut threads = Vec::new();
+            for c in 0..config.thread_count {
+                let length = automata.cells.lock().unwrap().len();
+                let start = length / config.thread_count * c;
+                let end = length / config.thread_count * (c + 1);
+
+                let cells_reference = Arc::clone(&automata.cells);
+                let size_reference = Arc::clone(&automata.size);
+                let state_function_reference = Arc::clone(&automata.state_function);
+                threads.push(thread::spawn(move || {
+                    let mut updated_states: Vec<(usize, usize)> = Vec::new();
+                    for i in start..end {
+                        let state = state_function_reference(
+                            cells_reference.lock().unwrap().as_mut(), 
+                            *size_reference, 
+                            i
+                        );
+
+                        if state != cells_reference.lock().unwrap()[i] {
+                            updated_states.push((i, state));
+                        }
+                    }
+
+                    updated_states
+                } ));
+            }
+
+            let mut updated_states: Vec<(usize, usize)> = Vec::new();
+            for handle in threads.drain(0..) {
+                updated_states.append(&mut handle.join().unwrap());
+            }
+
+            for (index, state) in updated_states.drain(0..) {
+                automata.cells.lock().unwrap()[index] = state;
+            }
             update_mesh_from_automata(&mut mesh, &automata);
             accumulated_time -= fps;
         }

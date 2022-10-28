@@ -1,4 +1,3 @@
-use std::thread;
 use std::sync::{
     Arc,
     Mutex
@@ -50,8 +49,6 @@ impl Size {
     }
 }
 
-const THREAD_COUNT: usize = 2;
-
 pub struct Automata {
     pub cells: Arc<Mutex<Vec<usize>>>,
     pub size: Arc<Size>,
@@ -74,44 +71,6 @@ impl Automata {
             size: Arc::new(size),
             state_function: Arc::new(state_function),
             cube_function: Box::new(cube_function)
-        }
-    }
-
-    pub fn tick(&mut self) {
-        let mut threads = Vec::new();
-        for c in 0..THREAD_COUNT {
-            let length = self.cells.lock().unwrap().len();
-            let start = length / THREAD_COUNT * c;
-            let end = length / THREAD_COUNT * (c + 1);
-
-            let cells_reference = Arc::clone(&self.cells);
-            let size_reference = Arc::clone(&self.size);
-            let state_function_reference = Arc::clone(&self.state_function);
-            threads.push(thread::spawn(move || {
-                let mut updated_states: Vec<(usize, usize)> = Vec::new();
-                for i in start..end {
-                    let state = state_function_reference(
-                        cells_reference.lock().unwrap().as_mut(), 
-                        *size_reference, 
-                        i
-                    );
-
-                    if state != cells_reference.lock().unwrap()[i] {
-                        updated_states.push((i, state));
-                    }
-                }
-
-                updated_states
-            } ));
-        }
-
-        let mut updated_states: Vec<(usize, usize)> = Vec::new();
-        for handle in threads.drain(0..) {
-            updated_states.append(&mut handle.join().unwrap());
-        }
-
-        for (index, state) in updated_states.drain(0..) {
-            self.cells.lock().unwrap()[index] = state;
         }
     }
 }
