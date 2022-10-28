@@ -3,7 +3,8 @@ use cgmath::Point3;
 use block_engine_wgpu::{
     Config, 
     camera::birds_eye_camera, 
-    automata,
+    automata, 
+    mesh::objects
 };
 
 #[allow(dead_code)]
@@ -24,8 +25,16 @@ pub fn cgol_automata() -> automata::Automata {
     automata::Automata::new(
         SIZE,
         state_function,
-        &vec![(1, [1.0; 3])]
+        cube_function
     )
+}
+
+fn cube_function(coord: Point3<isize>, state: usize) -> Option<Box<dyn objects::MeshObject>> {
+    match state {
+        0 => None,
+        1 => Some(Box::new(objects::Cube::new(coord, [1.0; 3]))),
+        _ => panic!()
+    }
 }
 
 fn state_function(cells: &[usize], size: automata::Size, index: usize) -> usize {
