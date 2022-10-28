@@ -3,6 +3,7 @@ pub mod mesh;
 pub mod camera;
 mod light;
 mod vertex;
+use cgmath::Point3;
 pub(crate) use vertex::Vertex;
 pub mod automata;
 
@@ -43,16 +44,38 @@ fn update_mesh_from_automata(mesh: &mut mesh::Mesh, automata: &automata::Automat
         mesh.truncate(1);
     }
 
+    for x in 0..automata.cells.lock().unwrap().size.x_len {
+        let x = x as isize;
+        for y in 0..automata.cells.lock().unwrap().size.y_len {
+            let y = y as isize;
+            for z in 0..automata.cells.lock().unwrap().size.z_len {
+                let z = z as isize;
+
+                let point = Point3::new(x, y, z);
+
+                'builder: for (state, color) in automata.states.iter().cloned() {
+                    
+                }
+            }
+        }
+    }
+
     for i in 0..(automata.size.x_len * automata.size.y_len * automata.size.z_len) {
         let point = automata.size.to_point(i);
-        if let Some(object) = (automata.cube_function)(point, automata.cells.lock().unwrap()[i]) {
-            mesh.push(object)
+        'builder: for (state, color) in automata.states.iter().cloned() {
+            if state == automata.cells.lock().unwrap()[i] {
+                mesh.push(Box::new(objects::Cube::new(
+                    point,
+                    color
+                )));
+
+                break 'builder;
+            }
         }
     }
 }
 
-pub async fn run(config: Config, automata: Automata) {
-
+pub async fn run<'a>(config: Config, automata: Automata) {
     // Contains all of the scene's geometry
     let mut mesh = mesh::Mesh::default();
 

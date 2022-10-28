@@ -4,9 +4,6 @@ use std::sync::{
 };
 
 use cgmath::Point3;
-use rand::Rng;
-
-use super::mesh::objects;
 
 #[derive(Clone, Copy)]
 pub struct Size {
@@ -49,28 +46,24 @@ impl Size {
     }
 }
 
+pub struct Cells {
+    pub(crate) cell_array: Vec<usize>,
+    pub(crate) size: Size
+}
+
 pub struct Automata {
-    pub cells: Arc<Mutex<Vec<usize>>>,
-    pub size: Arc<Size>,
-    pub state_function: Arc<dyn Fn(&[usize], Size, usize) -> usize + Send + Sync>,
-    pub cube_function: Box<dyn Fn(Point3<isize>, usize) -> Option<Box<dyn objects::MeshObject>>>
+    pub cells: Arc<Mutex<Cells>>,
+    pub state_function: Arc<dyn Fn(&Cells, Point3<isize>) -> usize + Send + Sync>,
+    pub states: Vec<(usize, [f32; 3])>
 }
 
 impl Automata {
-    pub fn new<F: 'static, G: 'static>(size: Size, state_function: F, cube_function: G) -> Self
-        where F: Fn(&[usize], Size, usize) -> usize + Send + Sync + Copy, 
-              G: Fn(Point3<isize>, usize) -> Option<Box<dyn objects::MeshObject>> {
-
-        let mut cells = vec![0; size.x_len * size.y_len * size.z_len];
-        
-        let mut prng = rand::thread_rng();
-        for cell in &mut cells { *cell = prng.gen_range(0..2); }
-
+    pub fn new<F: 'static>(cells: Cells, state_function: F, states: &[(usize, [f32; 3])]) -> Self
+        where F: Fn(&Cells, Point3<isize>) -> usize + Send + Sync + Copy {
         Self {
             cells: Arc::new(Mutex::new(cells)),
-            size: Arc::new(size),
             state_function: Arc::new(state_function),
-            cube_function: Box::new(cube_function)
+            states: states.to_vec()
         }
     }
 }
