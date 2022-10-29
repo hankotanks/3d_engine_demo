@@ -16,8 +16,7 @@ pub struct CameraConfig {
     pub yaw: Option<f32>,
     pub aspect: Option<f32>,
     pub zoom_speed: Option<f32>,
-    pub rotate_speed: Option<f32>,
-    pub locked: bool
+    pub rotate_speed: Option<f32>
 }
 
 impl Default for CameraConfig {
@@ -29,8 +28,7 @@ impl Default for CameraConfig {
             yaw: Some(1.25),
             aspect: Some(1.0), 
             zoom_speed: Some(0.6), 
-            rotate_speed: Some(0.025), 
-            locked: false
+            rotate_speed: Some(0.025)
         }
     }
 }
@@ -43,8 +41,7 @@ pub const fn birds_eye_camera(x_len: usize, z_len: usize) -> CameraConfig {
         yaw: Some(0.0),
         aspect: None, 
         zoom_speed: None,
-        rotate_speed: None,
-        locked: true
+        rotate_speed: Some(0.0)
     }
 }
 
