@@ -93,4 +93,29 @@ impl Automata {
             size
         }
     }
+
+    pub fn neighbors(&self, index: Point3<usize>) -> Vec<Point3<usize>> {
+        let mut neighbors = Vec::new();
+        'x_dim: for x in -1..=1isize {
+            let x = index.x as isize + x;
+            if x < 0 || x >= self.size.x_len as isize { continue 'x_dim; }
+
+            'y_dim: for y in -1..=1isize {
+                let y  = index.y as isize + y;
+                if y < 0 || y >= self.size.y_len as isize { continue 'y_dim; }
+
+                'z_dim: for z in -1..=1isize {
+                    let z = index.z as isize + z;
+                    if z < 0 || z >= self.size.z_len as isize { continue 'z_dim; }
+
+                    let target = Point3::new(x as usize, y as usize, z as usize);
+                    if target != index {
+                        neighbors.push(target)
+                    }
+                }
+            }
+        }
+
+        neighbors
+    }
 }
