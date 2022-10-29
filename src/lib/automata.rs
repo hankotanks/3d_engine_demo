@@ -1,12 +1,7 @@
-use std::sync::{
-    Arc,
-    Mutex
-};
+use std::ops::{Index, IndexMut};
 
 use cgmath::Point3;
 use rand::Rng;
-
-use super::mesh::objects;
 
 #[derive(Clone, Copy)]
 pub struct Size {
@@ -25,52 +20,77 @@ impl From<[usize; 3]> for Size {
     }
 }
 
-impl Size {
-    pub fn to_point(&self, mut index: usize) -> Point3<isize> {
-        let y = (index / (self.x_len * self.z_len)) as isize;
-        index -= y as usize * self.x_len * self.z_len;
-        let z = (index / self.x_len) as isize;
-        let x = (index % self.x_len) as isize;
+pub struct Automata {
+    pub(crate) cells: Vec<usize>,
+    pub(crate) size: Size
+}
 
-        [x, y, z].into()
-    }
+impl Index<Point3<usize>> for Automata {
+    type Output = usize;
 
-    pub fn to_index(&self, point: Point3<isize>) -> Option<usize> {
-        if point.x < 0 || point.y < 0 || point.z < 0 {
-            return None;
+    fn index(&self, index: Point3<usize>) -> &Self::Output {
+        let cell_index = index.x + index.y * self.size.x_len * self.size.z_len + index.z * self.size.x_len;
+        if cell_index < self.cells.len() {
+            return &self.cells[cell_index];
         }
 
-        let index = point.x as usize + point.z as usize * self.x_len + point.y as usize * self.x_len * self.z_len;
-        if index >= self.x_len * self.y_len * self.z_len {
-            None
-        } else {
-            Some(index)
-        }
+        &0
     }
 }
 
-pub struct Automata {
-    pub cells: Arc<Mutex<Vec<usize>>>,
-    pub size: Arc<Size>,
-    pub state_function: Arc<dyn Fn(&[usize], Size, usize) -> usize + Send + Sync>,
-    pub cube_function: Box<dyn Fn(Point3<isize>, usize) -> Option<Box<dyn objects::MeshObject>>>
+impl IndexMut<Point3<usize>> for Automata {
+    fn index_mut(&mut self, index: Point3<usize>) -> &mut Self::Output {
+        let cell_index = index.x + index.y * self.size.x_len * self.size.z_len + index.z * self.size.x_len;
+        if cell_index < self.cells.len() {
+            return &mut self.cells[cell_index];
+        }
+
+        panic!();
+    }
+}
+
+pub struct AutomataIterator<'a> {
+    automata: &'a Automata,
+    index: usize
+}
+
+impl<'a> Iterator for AutomataIterator<'a> {
+    type Item = (Point3<usize>, usize);
+
+    fn next(&mut self) -> Option<Self::Item> {
+        if self.index < self.automata.size.x_len * self.automata.size.y_len * self.automata.size.z_len {
+            self.index += 1;
+
+            let y = self.index / (self.automata.size.x_len * self.automata.size.z_len);
+            let index = self.index - y * self.automata.size.x_len * self.automata.size.z_len;
+            let z = index / self.automata.size.x_len;
+            let x = index % self.automata.size.x_len;
+
+            let target = [x, y, z].into();
+            
+            return Some((target, self.automata.cells[self.index - 1]))
+        }
+
+        None
+    }
 }
 
 impl Automata {
-    pub fn new<F: 'static, G: 'static>(size: Size, state_function: F, cube_function: G) -> Self
-        where F: Fn(&[usize], Size, usize) -> usize + Send + Sync + Copy, 
-              G: Fn(Point3<isize>, usize) -> Option<Box<dyn objects::MeshObject>> {
+    pub fn iter(&self) -> AutomataIterator {
+        AutomataIterator { automata: self, index: 0 }
+    }
+}
 
+impl Automata {
+    pub fn new(size: Size) -> Self {
         let mut cells = vec![0; size.x_len * size.y_len * size.z_len];
         
         let mut prng = rand::thread_rng();
         for cell in &mut cells { *cell = prng.gen_range(0..2); }
 
         Self {
-            cells: Arc::new(Mutex::new(cells)),
-            size: Arc::new(size),
-            state_function: Arc::new(state_function),
-            cube_function: Box::new(cube_function)
+            cells,
+            size
         }
     }
 }

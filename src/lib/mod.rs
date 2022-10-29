@@ -3,6 +3,7 @@ pub mod mesh;
 pub mod camera;
 mod light;
 mod vertex;
+use cgmath::Point3;
 pub(crate) use vertex::Vertex;
 pub mod automata;
 
@@ -11,7 +12,7 @@ use automata::Automata;
 use mesh::objects;
 use mesh::objects::MeshObject;
 
-use std::{time, sync::Arc, thread};
+use std::{time, sync::{Arc, Mutex}, thread};
 
 use winit::{
     event_loop,
@@ -27,7 +28,7 @@ pub struct Config {
     pub camera_config: camera::CameraConfig
 }
 
-fn update_mesh_from_automata(mesh: &mut mesh::Mesh, automata: &automata::Automata) {
+fn update_mesh_from_automata(mesh: &mut mesh::Mesh, automata: &automata::Automata, states: &[(usize, [f32; 3])]) {
     // TODO: Need a better system for managing lights...
     // TODO: Maybe an enum with options like Corners, Center
     // And keep track of the number of lights
@@ -43,21 +44,36 @@ fn update_mesh_from_automata(mesh: &mut mesh::Mesh, automata: &automata::Automat
         mesh.truncate(1);
     }
 
-    for i in 0..(automata.size.x_len * automata.size.y_len * automata.size.z_len) {
-        let point = automata.size.to_point(i);
-        if let Some(object) = (automata.cube_function)(point, automata.cells.lock().unwrap()[i]) {
-            mesh.push(object)
+    for (point, cell_state) in automata.iter() {
+        let point = [
+            point.x as isize,
+            point.y as isize,
+            point.z as isize
+        ].into();
+        
+        'builder: for (state, color) in states.iter().cloned() {
+            if state == cell_state {
+                mesh.push(Box::new(objects::Cube::new(
+                    point,
+                    color
+                )));    
+
+                break 'builder;
+            }
         }
     }
 }
 
-pub async fn run(config: Config, automata: Automata) {
+pub async fn run<F: 'static>(config: Config, automata: Automata, state_function: F, states: &[(usize, [f32; 3])]) 
+    where F: Fn(&Automata, Point3<usize>) -> usize + Send + Sync + Copy {
+
+    let automata = Arc::new(Mutex::new(automata));
 
     // Contains all of the scene's geometry
     let mut mesh = mesh::Mesh::default();
 
     // Initialize the mesh
-    update_mesh_from_automata(&mut mesh, &automata);
+    //update_mesh_from_automata(&mut mesh, &automata);
 
     let event_loop = event_loop::EventLoop::new();
     let window = WindowBuilder::new().build(&event_loop).unwrap();
@@ -70,6 +86,8 @@ pub async fn run(config: Config, automata: Automata) {
     let mut accumulated_time = 0.0;
     let mut current = time::Instant::now();
 
+    let cell_states = states.to_vec();
+
     // The game loop itself
     event_loop.run(move |event, _, control_flow| {
         accumulated_time += current.elapsed().as_secs_f32();
@@ -77,23 +95,28 @@ pub async fn run(config: Config, automata: Automata) {
         if accumulated_time >= fps { 
             let mut threads = Vec::new();
             for c in 0..config.thread_count {
-                let length = automata.cells.lock().unwrap().len();
+                let length = automata.lock().unwrap().cells.len();
                 let start = length / config.thread_count * c;
                 let end = length / config.thread_count * (c + 1);
 
-                let cells_reference = Arc::clone(&automata.cells);
-                let size_reference = Arc::clone(&automata.size);
-                let state_function_reference = Arc::clone(&automata.state_function);
+                let automata_ref = Arc::clone(&automata);
                 threads.push(thread::spawn(move || {
+                    let size = automata_ref.lock().unwrap().size;
+                   
                     let mut updated_states: Vec<(usize, usize)> = Vec::new();
                     for i in start..end {
-                        let state = state_function_reference(
-                            cells_reference.lock().unwrap().as_mut(), 
-                            *size_reference, 
-                            i
+                        let y = i / (size.x_len * size.z_len);
+                        let index = i - y * size.x_len * size.z_len;
+                        let z = index / size.x_len;
+                        let x = index % size.x_len;
+    
+                        let target = [x, y, z].into();
+                        let state = state_function(
+                            &automata_ref.lock().unwrap(), 
+                            target
                         );
 
-                        if state != cells_reference.lock().unwrap()[i] {
+                        if state != automata_ref.lock().unwrap().cells[i] {
                             updated_states.push((i, state));
                         }
                     }
@@ -108,9 +131,10 @@ pub async fn run(config: Config, automata: Automata) {
             }
 
             for (index, state) in updated_states.drain(0..) {
-                automata.cells.lock().unwrap()[index] = state;
+                automata.lock().unwrap().cells[index] = state;
             }
-            update_mesh_from_automata(&mut mesh, &automata);
+
+            update_mesh_from_automata(&mut mesh, &automata.lock().unwrap(), &cell_states);
             accumulated_time -= fps;
         }
 
