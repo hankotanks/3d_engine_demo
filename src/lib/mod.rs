@@ -44,7 +44,7 @@ fn update_mesh_from_automata(mesh: &mut mesh::Mesh, automata: &automata::Automat
         mesh.truncate(1);
     }
 
-    for (point, cell_state) in automata.iter() {
+    for (point, cell_state) in automata.iter().with_coord() {
         let point = [
             point.x as isize,
             point.y as isize,
