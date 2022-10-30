@@ -12,6 +12,6 @@ fn main() {
         CGOL_CONFIG,
         cgol_automata_init(),
         cgol_state_function,
-        &vec![(1, [1.0; 3])]
+        &[(1, [1.0; 3])]
     ));
 }
