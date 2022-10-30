@@ -33,7 +33,7 @@ pub fn cgol_automata_init() -> automata::Automata {
 }
 
 pub fn cgol_state_function(automata: &automata::Automata, index: Point3<usize>) -> usize {
-    let neighbor_count = automata.neighbors(index)
+    let neighbor_count = automata.moore_neighborhood(index)
         .iter()
         .fold(0, |count, adj| { count + automata[*adj] } );
 

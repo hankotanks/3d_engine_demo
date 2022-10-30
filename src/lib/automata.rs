@@ -147,7 +147,7 @@ impl Automata {
         }
     }
 
-    pub fn neighbors(&self, index: Point3<usize>) -> Vec<Point3<usize>> {
+    pub fn moore_neighborhood(&self, index: Point3<usize>) -> Vec<Point3<usize>> {
         let mut neighbors = Vec::new();
         'x_dim: for x in -1..=1isize {
             let x = index.x as isize + x;
