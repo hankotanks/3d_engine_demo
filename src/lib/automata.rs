@@ -141,30 +141,28 @@ impl Automata {
     pub fn new(size: Size) -> Self {
         let cells = vec![0; size.x_len * size.y_len * size.z_len];
 
-        Self {
-            cells,
-            size
-        }
+        Self { cells, size }
     }
 
     pub fn moore_neighborhood(&self, index: Point3<usize>) -> Vec<Point3<usize>> {
         let mut neighbors = Vec::new();
-        'x_dim: for x in -1..=1isize {
-            let x = index.x as isize + x;
-            if x < 0 || x >= self.size.x_len as isize { continue 'x_dim; }
+        for x in -1..=1isize {
+            let mut x = index.x as isize + x;
+            if x == -1 { x = self.size.x_len as isize - 1; }
+            if x == self.size.x_len as isize { x = 0; }
 
-            'y_dim: for y in -1..=1isize {
-                let y  = index.y as isize + y;
-                if y < 0 || y >= self.size.y_len as isize { continue 'y_dim; }
+            for y in -1..=1isize {
+                let mut y  = index.y as isize + y;
+                if y == -1 { y = self.size.y_len as isize - 1; }
+                if y == self.size.y_len as isize { y = 0; }
 
-                'z_dim: for z in -1..=1isize {
-                    let z = index.z as isize + z;
-                    if z < 0 || z >= self.size.z_len as isize { continue 'z_dim; }
+                for z in -1..=1isize {
+                    let mut z = index.z as isize + z;
+                    if z == -1 { z = self.size.z_len as isize - 1; }
+                    if z == self.size.z_len as isize { z = 0; }
 
                     let target = Point3::new(x as usize, y as usize, z as usize);
-                    if target != index {
-                        neighbors.push(target)
-                    }
+                    if target != index { neighbors.push(target); }
                 }
             }
         }

@@ -9,21 +9,23 @@ use rand::Rng;
 
 #[allow(dead_code)]
 const CGOL_SIZE: automata::Size = automata::Size {
-    x_len: 71,
-    y_len: 1,
-    z_len: 71
+    x_len: 51,
+    y_len: 3,
+    z_len: 51
 };
 
 #[allow(dead_code)]
 pub const CGOL_CONFIG: Config = Config {
     fps: 20,
-    thread_count: 4,
+    thread_count: 2,
     camera_config: birds_eye_camera(CGOL_SIZE.x_len, CGOL_SIZE.z_len)
 };
 
 pub fn cgol_automata_init() -> automata::Automata {
     let mut automata = automata::Automata::new(CGOL_SIZE);
-    for coord in automata.iter_coords() {
+    'coord: for coord in automata.iter_coords() {
+        if coord.y != 1 { continue 'coord; }
+
         if rand::thread_rng().gen_bool(0.5f64) {
             automata[coord] = 1;
         }
@@ -32,7 +34,9 @@ pub fn cgol_automata_init() -> automata::Automata {
     automata
 }
 
-pub fn cgol_state_function(automata: &automata::Automata, index: Point3<usize>) -> usize {
+pub fn cgol_state_function(automata: &automata::Automata, index: Point3<usize>) -> usize {    
+    if index.y != 1 { return 0; }
+
     let neighbor_count = automata.moore_neighborhood(index)
         .iter()
         .fold(0, |count, adj| { count + automata[*adj] } );
