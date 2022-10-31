@@ -25,23 +25,58 @@ use winit::{
 pub struct Config {
     pub fps: usize,
     pub thread_count: usize,
+    pub lighting: Lighting,
     pub camera_config: camera::CameraConfig
 }
 
-fn update_mesh_from_automata(mesh: &mut mesh::Mesh, automata: &automata::Automata, states: &[(usize, [f32; 3])]) {
-    // TODO: Need a better system for managing lights...
-    // TODO: Maybe an enum with options like Corners, Center
-    // And keep track of the number of lights
+#[derive(Clone, Copy)]
+pub enum Lighting {
+    CenterBottom = 1,
+    Corners = 8
+}
 
+fn update_mesh_from_automata(
+    mesh: &mut mesh::Mesh, 
+    automata: &automata::Automata, 
+    states: &[(usize, [f32; 3])], 
+    lighting: Lighting) 
+{
     if mesh.len() == 0 {
-        let mut light = objects::Cube::new(
-            [(automata.size.x_len / 2) as isize, -1, (automata.size.z_len / 2) as isize].into(),
-            [0.0; 3]
-        );
-        light.set_emitter(Some([1.0, 1.0, 1.0, 10.0].into()));
-        mesh.push(Box::new(light));
+        let size_x = automata.size.x_len as isize;
+        let size_y = automata.size.y_len as isize;
+        let size_z = automata.size.z_len as isize;
+
+        match lighting {
+            Lighting::CenterBottom => {
+                let mut light = objects::Cube::new(
+                    [size_x / 2, -1, size_z / 2].into(),
+                    [0.0; 3]
+                );
+                light.set_emitter(Some([1.0, 1.0, 1.0, 2.0].into()));
+
+                mesh.push(Box::new(light));
+            },
+            Lighting::Corners => {
+                let light_positions: [[isize; 3]; 8] = [
+                    [-1; 3],
+                    [size_x, -1, -1],
+                    [size_x, size_y, -1],
+                    [size_x, size_y, size_z],
+                    [-1, size_y, -1],
+                    [-1, size_y, size_z],
+                    [-1, -1, size_z],
+                    [size_x, -1, size_z]
+                ];
+                
+                for pos in light_positions.into_iter() {
+                    let mut light = objects::Cube::new(pos.into(), [0.0; 3]);
+                    light.set_emitter(Some([1.0, 1.0, 1.0, 2.0].into()));
+                    mesh.push(Box::new(light));
+                }
+            }
+        }
     } else {
-        mesh.truncate(1);
+        mesh.truncate(lighting as usize)
     }
 
     for (point, cell_state) in automata.iter().with_coord() {
@@ -134,7 +169,7 @@ pub async fn run<F: 'static>(config: Config, automata: Automata, state_function:
                 automata.lock().unwrap().cells[index] = state;
             }
 
-            update_mesh_from_automata(&mut mesh, &automata.lock().unwrap(), &cell_states);
+            update_mesh_from_automata(&mut mesh, &automata.lock().unwrap(), &cell_states, config.lighting);
             accumulated_time -= fps;
         }
 

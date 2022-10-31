@@ -3,21 +3,22 @@ use cgmath::Point3;
 use block_engine_wgpu::{
     Config, 
     camera::birds_eye_camera, 
-    automata
+    automata, Lighting
 };
 use rand::Rng;
 
 #[allow(dead_code)]
 const CGOL_SIZE: automata::Size = automata::Size {
-    x_len: 51,
+    x_len: 31,
     y_len: 3,
-    z_len: 51
+    z_len: 31
 };
 
 #[allow(dead_code)]
 pub const CGOL_CONFIG: Config = Config {
     fps: 20,
-    thread_count: 2,
+    thread_count: 4,
+    lighting: Lighting::CenterBottom,
     camera_config: birds_eye_camera(CGOL_SIZE.x_len, CGOL_SIZE.z_len)
 };
 
