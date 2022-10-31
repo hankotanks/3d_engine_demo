@@ -144,29 +144,55 @@ impl Automata {
         Self { cells, size }
     }
 
+    fn wrap_coord(&self, coord: Point3<isize>) -> Point3<usize> {
+        let mut x = coord.x % self.size.x_len as isize;
+        let mut y = coord.y % self.size.y_len as isize;
+        let mut z = coord.z % self.size.z_len as isize;
+
+        if x < 0 { x += self.size.x_len as isize; }
+        if y < 0 { y += self.size.y_len as isize; }
+        if z < 0 { z += self.size.z_len as isize; }
+        
+        [ x as usize, y as usize, z as usize ].into()
+    }
+
     pub fn moore_neighborhood(&self, index: Point3<usize>) -> Vec<Point3<usize>> {
         let mut neighbors = Vec::new();
         for x in -1..=1isize {
-            let mut x = index.x as isize + x;
-            if x == -1 { x = self.size.x_len as isize - 1; }
-            if x == self.size.x_len as isize { x = 0; }
-
+            let x = index.x as isize + x;
             for y in -1..=1isize {
-                let mut y  = index.y as isize + y;
-                if y == -1 { y = self.size.y_len as isize - 1; }
-                if y == self.size.y_len as isize { y = 0; }
-
+                let y  = index.y as isize + y;
                 for z in -1..=1isize {
-                    let mut z = index.z as isize + z;
-                    if z == -1 { z = self.size.z_len as isize - 1; }
-                    if z == self.size.z_len as isize { z = 0; }
+                    let z = index.z as isize + z;
 
-                    let target = Point3::new(x as usize, y as usize, z as usize);
+                    let target = self.wrap_coord([x, y, z].into());
                     if target != index { neighbors.push(target); }
                 }
             }
         }
 
         neighbors
+    }
+
+    pub fn von_neumann_neighborhood(&self, index: Point3<usize>) -> Vec<Point3<usize>> {
+        let offsets: [[isize; 3]; 6] = [
+            [-1, 0, 0],
+            [1, 0, 0],
+            [0, -1, 0],
+            [0, 1, 0],
+            [0, 0, -1],
+            [0, 0, 1]
+        ];
+
+        let mut neighbors = Vec::new();
+        for offset in offsets.into_iter() {
+            neighbors.push(self.wrap_coord(Point3::new(
+                offset[0] + index.x as isize,
+                offset[1] + index.y as isize,
+                offset[2] + index.z as isize
+            )));
+        }
+
+        neighbors 
     }
 }

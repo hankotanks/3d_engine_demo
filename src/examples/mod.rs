@@ -1,2 +1,2 @@
 pub mod cgol;
-pub mod life3d;
+pub mod wire_world;
