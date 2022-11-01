@@ -44,7 +44,9 @@ impl Mesh {
     pub(crate) fn build_buffers(&self, device: &wgpu::Device) -> MeshBufferData {
         let mut vertices = Vec::new();
         let mut indices = Vec::new();
-        for object in self.objects.iter() {
+        'data: for object in self.objects.iter() {
+            if object.color() == [0.0; 3] { continue 'data; } 
+            
             let mut data = object.build_object_data();
 
             let mut offset_indices = data.indices

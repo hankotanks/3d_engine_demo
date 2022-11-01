@@ -12,7 +12,7 @@ use cgmath::Point3;
 pub fn ww_run(file_name: &str) -> Result<(), io::Error> {
     let automata = automata::Automata::from_file(file_name)?;
     let mut config = Config {
-        fps: 30,
+        fps: 10,
         thread_count: 4,
         lighting: Lighting::Corners,
         camera_config: birds_eye_camera(automata.size.x_len, automata.size.z_len)

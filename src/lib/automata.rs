@@ -145,8 +145,6 @@ impl Automata {
     pub fn from_file(file_name: &str) -> Result<Self, io::Error> {
         match fs::read(file_name) {
             Ok(mut buffer) => {
-                dbg!(&buffer);
-
                 let mut automata = Self::new([
                     buffer.remove(0) as usize, 
                     buffer.remove(0) as usize, 
