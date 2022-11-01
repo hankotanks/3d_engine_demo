@@ -1,11 +1,9 @@
-use std::ops::{
-    Index, 
-    IndexMut
-};
+use std::{ fs, io };
+use std::ops::{ Index, IndexMut };
 
 use cgmath::Point3;
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Debug)]
 pub struct Size {
     pub x_len: usize,
     pub y_len: usize,
@@ -23,12 +21,12 @@ impl From<[usize; 3]> for Size {
 }
 
 pub struct Automata {
-    pub(crate) cells: Vec<usize>,
-    pub(crate) size: Size
+    pub(crate) cells: Vec<u8>,
+    pub size: Size
 }
 
 impl Index<Point3<usize>> for Automata {
-    type Output = usize;
+    type Output = u8;
 
     fn index(&self, index: Point3<usize>) -> &Self::Output {
         let cell_index = index.x + index.y * self.size.x_len * self.size.z_len + index.z * self.size.x_len;
@@ -57,7 +55,7 @@ pub struct StateIterator<'a> {
 }
 
 impl<'a> Iterator for StateIterator<'a> {
-    type Item = usize;
+    type Item = u8;
 
     fn next(&mut self) -> Option<Self::Item> {
         if self.index < self.automata.size.x_len * self.automata.size.y_len * self.automata.size.z_len {
@@ -81,7 +79,7 @@ pub struct CellIterator<'a> {
 }
 
 impl<'a> Iterator for CellIterator<'a> {
-    type Item = (Point3<usize>, usize);
+    type Item = (Point3<usize>, u8);
 
     fn next(&mut self) -> Option<Self::Item> {
         let current_index = self.state_iterator.index;
@@ -142,6 +140,28 @@ impl Automata {
         let cells = vec![0; size.x_len * size.y_len * size.z_len];
 
         Self { cells, size }
+    }
+
+    pub fn from_file(file_name: &str) -> Result<Self, io::Error> {
+        match fs::read(file_name) {
+            Ok(mut buffer) => {
+                dbg!(&buffer);
+
+                let mut automata = Self::new([
+                    buffer.remove(0) as usize, 
+                    buffer.remove(0) as usize, 
+                    buffer.remove(0) as usize
+                ].into());
+
+                let length = automata.size.x_len * automata.size.y_len * automata.size.z_len;
+                if buffer.len() > length { buffer.truncate(length); } 
+                else if buffer.len() < length { buffer.resize(length, 0); }
+                automata.cells = buffer;
+
+                Ok(automata)
+            },
+            Err(err) => { return Result::Err(err); }
+        }
     }
 
     fn wrap_coord(&self, coord: Point3<isize>) -> Point3<usize> {

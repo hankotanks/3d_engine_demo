@@ -1,41 +1,35 @@
+use std::io;
+
 use block_engine_wgpu::{
     automata, 
     Config, 
     camera::birds_eye_camera, 
-    Lighting
+    Lighting, run
 };
 
 use cgmath::Point3;
 
-const WW_SIZE: automata::Size = automata::Size {
-    x_len: 71,
-    y_len: 3,
-    z_len: 3
-};
+pub fn ww_run(file_name: &str) -> Result<(), io::Error> {
+    let automata = automata::Automata::from_file(file_name)?;
+    let mut config = Config {
+        fps: 30,
+        thread_count: 4,
+        lighting: Lighting::Corners,
+        camera_config: birds_eye_camera(automata.size.x_len, automata.size.z_len)
+    };
+    config.camera_config.rotate_speed = None;
 
-pub const WW_CONFIG: Config = Config {
-    fps: 30,
-    thread_count: 4,
-    lighting: Lighting::CenterBottom,
-    camera_config: birds_eye_camera(WW_SIZE.x_len, WW_SIZE.z_len)
-};
+    pollster::block_on(run(
+        config,
+        automata,
+        ww_update,
+        &[(1, [1.0, 0.2, 0.0]), (2, [1.0; 3]), (3, [0.0, 0.2, 1.0])]
+    ));
 
-pub fn ww_init() -> automata::Automata {
-    let mut automata = automata::Automata::new(WW_SIZE);
-
-    for x in 0..WW_SIZE.x_len {
-        let point = Point3::new(x, 1, 1);
-
-        automata[point] = 1;
-    }
-
-    automata[Point3::new(0, 1, 1)] = 3;
-    automata[Point3::new(1, 1, 1)] = 2;
-
-    automata
+    Ok(())
 }
 
-pub fn ww_update(automata: &automata::Automata, point: Point3<usize>) -> usize {
+fn ww_update(automata: &automata::Automata, point: Point3<usize>) -> u8 {
     let current = automata[point];
     match current {
         1 => {

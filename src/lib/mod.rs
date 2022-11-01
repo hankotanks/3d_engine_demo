@@ -38,7 +38,7 @@ pub enum Lighting {
 fn update_mesh_from_automata(
     mesh: &mut mesh::Mesh, 
     automata: &automata::Automata, 
-    states: &[(usize, [f32; 3])], 
+    states: &[(u8, [f32; 3])], 
     lighting: Lighting) 
 {
     if mesh.len() == 0 {
@@ -99,8 +99,8 @@ fn update_mesh_from_automata(
     }
 }
 
-pub async fn run<F: 'static>(config: Config, automata: Automata, state_function: F, states: &[(usize, [f32; 3])]) 
-    where F: Fn(&Automata, Point3<usize>) -> usize + Send + Sync + Copy {
+pub async fn run<F: 'static>(config: Config, automata: Automata, state_function: F, states: &[(u8, [f32; 3])]) 
+    where F: Fn(&Automata, Point3<usize>) -> u8 + Send + Sync + Copy {
 
     let automata = Arc::new(Mutex::new(automata));
 
@@ -138,7 +138,7 @@ pub async fn run<F: 'static>(config: Config, automata: Automata, state_function:
                 threads.push(thread::spawn(move || {
                     let size = automata_ref.lock().unwrap().size;
                    
-                    let mut updated_states: Vec<(usize, usize)> = Vec::new();
+                    let mut updated_states: Vec<(usize, u8)> = Vec::new();
                     for i in start..end {
                         let y = i / (size.x_len * size.z_len);
                         let index = i - y * size.x_len * size.z_len;
@@ -160,7 +160,7 @@ pub async fn run<F: 'static>(config: Config, automata: Automata, state_function:
                 } ));
             }
 
-            let mut updated_states: Vec<(usize, usize)> = Vec::new();
+            let mut updated_states: Vec<(usize, u8)> = Vec::new();
             for handle in threads.drain(0..) {
                 updated_states.append(&mut handle.join().unwrap());
             }

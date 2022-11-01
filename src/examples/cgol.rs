@@ -3,8 +3,10 @@ use cgmath::Point3;
 use block_engine_wgpu::{
     Config, 
     camera::birds_eye_camera, 
-    automata, Lighting
+    automata, 
+    Lighting
 };
+
 use rand::Rng;
 
 #[allow(dead_code)]
@@ -22,6 +24,7 @@ pub const CGOL_CONFIG: Config = Config {
     camera_config: birds_eye_camera(CGOL_SIZE.x_len, CGOL_SIZE.z_len)
 };
 
+#[allow(dead_code)]
 pub fn cgol_automata_init() -> automata::Automata {
     let mut automata = automata::Automata::new(CGOL_SIZE);
     'coord: for coord in automata.iter_coords() {
@@ -35,6 +38,7 @@ pub fn cgol_automata_init() -> automata::Automata {
     automata
 }
 
+#[allow(dead_code)]
 pub fn cgol_state_function(automata: &automata::Automata, index: Point3<usize>) -> usize {    
     if index.y != 1 { return 0; }
 
