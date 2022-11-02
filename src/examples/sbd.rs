@@ -16,7 +16,6 @@ use block_engine_wgpu::{
     run
 };
 
-
 const SBD_SIZE: automata::Size = automata::Size {
     x_len: 13,
     y_len: 13,
@@ -26,7 +25,7 @@ const SBD_SIZE: automata::Size = automata::Size {
 const SBD_CONFIG: Config = Config {
     fps: 20,
     thread_count: 4,
-    lighting: Lighting::Corners,
+    lighting: Lighting::VonNeumann,
     camera_config: CameraConfig {
         target: Some(Point3::new(
             SBD_SIZE.x_len as isize / 2, 
@@ -44,9 +43,9 @@ const SBD_CONFIG: Config = Config {
 
 const SURVIVAL: Range<usize> = 4..5;
 const BIRTH: Range<usize> = 3..4;
-const DECAY: u8 = 10;
+const DECAY: u8 = 20;
 const FILL_DENSITY: f64 = 0.02;
-const LOW_COLOR: Vector3<f32> = Vector3::new(0.9, 0.45, 0.0);
+const LOW_COLOR: Vector3<f32> = Vector3::new(0.9, 0.3, 0.0);
 const HIGH_COLOR: Vector3<f32> = Vector3::new(1.0, 0.0, 0.0);
 
 pub fn sbd_run() {

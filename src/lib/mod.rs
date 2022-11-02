@@ -31,8 +31,21 @@ pub struct Config {
 
 #[derive(Clone, Copy)]
 pub enum Lighting {
-    CenterBottom = 1,
-    Corners = 8
+    Bottom,
+    Center,
+    Corners,
+    VonNeumann
+}
+
+impl Lighting {
+    fn light_count(&self) -> usize {
+        match self {
+            Lighting::Bottom => 1,
+            Lighting::Center => 1,
+            Lighting::Corners => 8,
+            Lighting::VonNeumann => 6,
+        }
+    }
 }
 
 fn update_mesh_from_automata(
@@ -47,36 +60,61 @@ fn update_mesh_from_automata(
         let size_z = automata.size.z_len as isize;
 
         match lighting {
-            Lighting::CenterBottom => {
+            Lighting::Bottom => {
                 let mut light = objects::Cube::new(
-                    [size_x / 2, -1, size_z / 2].into(),
+                    [size_x / 2, -2, size_z / 2].into(),
                     [0.0; 3]
                 );
-                light.set_emitter(Some([1.0, 1.0, 1.0, 2.0].into()));
+                light.set_emitter(Some([1.0, 1.0, 1.0, 4.0].into()));
 
                 mesh.push(Box::new(light));
             },
             Lighting::Corners => {
                 let light_positions: [[isize; 3]; 8] = [
-                    [-1; 3],
-                    [size_x, -1, -1],
-                    [size_x, size_y, -1],
-                    [size_x, size_y, size_z],
-                    [-1, size_y, -1],
-                    [-1, size_y, size_z],
-                    [-1, -1, size_z],
-                    [size_x, -1, size_z]
+                    [-2; 3],
+                    [size_x + 1, -2, -2],
+                    [size_x + 1, size_y + 1, -2],
+                    [size_x + 1, size_y + 1, size_z + 1],
+                    [-2, size_y + 1, -2],
+                    [-2, size_y + 1, size_z + 1],
+                    [-2, -2, size_z + 1],
+                    [size_x + 1, -2, size_z + 1]
                 ];
                 
                 for pos in light_positions.into_iter() {
                     let mut light = objects::Cube::new(pos.into(), [0.0; 3]);
-                    light.set_emitter(Some([1.0, 1.0, 1.0, 2.0].into()));
+                    light.set_emitter(Some([1.0, 1.0, 1.0, 4.0].into()));
                     mesh.push(Box::new(light));
                 }
             }
+            Lighting::Center => {
+                let mut light = objects::Cube::new(
+                    [size_x / 2, size_y / 2, size_z / 2].into(),
+                    [0.0; 3]
+                );
+                light.set_emitter(Some([1.0, 1.0, 1.0, 4.0].into()));
+                mesh.push(Box::new(light));
+
+            },
+            Lighting::VonNeumann => {
+                let light_positions: [[isize; 3]; 6] = [
+                    [size_x / 2, -2, size_z / 2],
+                    [size_x / 2, size_y + 1, size_z / 2],
+                    [-2, size_y / 2, size_z / 2],
+                    [size_x + 1, size_y / 2, size_z / 2],
+                    [size_x / 2, size_y / 2, -2],
+                    [size_x / 2, size_y / 2, size_z + 1]
+                ];
+
+                for pos in light_positions.into_iter() {
+                    let mut light = objects::Cube::new(pos.into(), [0.0; 3]);
+                    light.set_emitter(Some([1.0, 1.0, 1.0, 4.0].into()));
+                    mesh.push(Box::new(light));
+                }
+            },
         }
     } else {
-        mesh.truncate(lighting as usize)
+        mesh.truncate(lighting.light_count());
     }
 
     for (point, cell_state) in automata.iter().with_coord() {

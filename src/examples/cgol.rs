@@ -20,7 +20,7 @@ const CGOL_SIZE: automata::Size = automata::Size {
 pub const CGOL_CONFIG: Config = Config {
     fps: 20,
     thread_count: 4,
-    lighting: Lighting::CenterBottom,
+    lighting: Lighting::Bottom,
     camera_config: birds_eye_camera(CGOL_SIZE.x_len, CGOL_SIZE.z_len)
 };
 
