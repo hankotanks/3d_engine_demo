@@ -9,6 +9,7 @@ use block_engine_wgpu::{
 
 use cgmath::Point3;
 
+#[allow(dead_code)]
 pub fn ww_run(file_name: &str) -> Result<(), io::Error> {
     let automata = automata::Automata::from_file(file_name)?;
     let mut config = Config {
