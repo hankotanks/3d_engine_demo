@@ -323,28 +323,11 @@ impl State {
             bytemuck::cast_slice(&[self.camera_uniform])
         );
 
-        // Update light sources
-        let mut light_count = 0;
-        for object in mesh.objects.iter() {
-            if let Some(emitter) = object.emitter() {
-                self.lighting.light_uniforms[light_count].color = emitter.get();
-                self.lighting.light_uniforms[light_count].position = [
-                    object.position().x as f32,
-                    object.position().y as f32,
-                    object.position().z as f32,
-                    1.0
-                ];
-
-                light_count += 1;
-            }
-        }
-
         self.queue.write_buffer(
             &self.lighting_buffer, 
             0, 
             bytemuck::cast_slice(&[self.lighting])
         );
-        // Finish updating light sources
     }
 
     pub fn render(&mut self) -> Result<(), wgpu::SurfaceError> {

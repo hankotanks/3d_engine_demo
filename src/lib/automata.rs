@@ -1,5 +1,9 @@
-use std::{ fs, io };
-use std::ops::{ Index, IndexMut };
+use std::{ 
+    fs,
+    io,
+    cmp::Ordering,
+    ops
+};
 
 use cgmath::Point3;
 
@@ -25,7 +29,7 @@ pub struct Automata {
     pub size: Size
 }
 
-impl Index<Point3<usize>> for Automata {
+impl ops::Index<Point3<usize>> for Automata {
     type Output = u8;
 
     fn index(&self, index: Point3<usize>) -> &Self::Output {
@@ -38,7 +42,7 @@ impl Index<Point3<usize>> for Automata {
     }
 }
 
-impl IndexMut<Point3<usize>> for Automata {
+impl ops::IndexMut<Point3<usize>> for Automata {
     fn index_mut(&mut self, index: Point3<usize>) -> &mut Self::Output {
         let cell_index = index.x + index.y * self.size.x_len * self.size.z_len + index.z * self.size.x_len;
         if cell_index < self.cells.len() {
@@ -124,7 +128,6 @@ impl Iterator for CoordIterator {
     }
 }
 
-
 impl Automata {
     pub fn iter(&self) -> StateIterator {
         StateIterator { automata: self, index: 0 }
@@ -151,27 +154,21 @@ impl Automata {
                     buffer.remove(0) as usize
                 ].into());
 
-                let length = automata.size.x_len * automata.size.y_len * automata.size.z_len;
-                if buffer.len() > length { buffer.truncate(length); } 
-                else if buffer.len() < length { buffer.resize(length, 0); }
+                let length = automata.size;
+                let length = length.x_len * length.y_len * length.z_len;
+
+                use Ordering::*;
+                match buffer.len().cmp(&length) {
+                    Less => buffer.resize(length, 0),
+                    Greater | Equal => buffer.truncate(length)
+                }
+
                 automata.cells = buffer;
 
                 Ok(automata)
             },
-            Err(err) => { return Result::Err(err); }
+            Err(e) => { Err(e) }
         }
-    }
-
-    fn wrap_coord(&self, coord: Point3<isize>) -> Point3<usize> {
-        let mut x = coord.x % self.size.x_len as isize;
-        let mut y = coord.y % self.size.y_len as isize;
-        let mut z = coord.z % self.size.z_len as isize;
-
-        if x < 0 { x += self.size.x_len as isize; }
-        if y < 0 { y += self.size.y_len as isize; }
-        if z < 0 { z += self.size.z_len as isize; }
-        
-        [ x as usize, y as usize, z as usize ].into()
     }
 
     pub fn moore_neighborhood(&self, index: Point3<usize>) -> Vec<Point3<usize>> {
@@ -183,7 +180,7 @@ impl Automata {
                 for z in -1..=1isize {
                     let z = index.z as isize + z;
 
-                    let target = self.wrap_coord([x, y, z].into());
+                    let target = wrap_coord(self.size, [x, y, z].into());
                     if target != index { neighbors.push(target); }
                 }
             }
@@ -204,13 +201,28 @@ impl Automata {
 
         let mut neighbors = Vec::new();
         for offset in offsets.into_iter() {
-            neighbors.push(self.wrap_coord(Point3::new(
-                offset[0] + index.x as isize,
-                offset[1] + index.y as isize,
-                offset[2] + index.z as isize
-            )));
+            neighbors.push(wrap_coord(
+                self.size, 
+                Point3::new(
+                    offset[0] + index.x as isize,
+                    offset[1] + index.y as isize,
+                    offset[2] + index.z as isize
+                )
+            ));
         }
 
         neighbors 
     }
+}
+
+fn wrap_coord(size: Size, coord: Point3<isize>) -> Point3<usize> {
+    let mut x = coord.x % size.x_len as isize;
+    let mut y = coord.y % size.y_len as isize;
+    let mut z = coord.z % size.z_len as isize;
+
+    if x < 0 { x += size.x_len as isize; }
+    if y < 0 { y += size.y_len as isize; }
+    if z < 0 { z += size.z_len as isize; }
+    
+    [ x as usize, y as usize, z as usize ].into()
 }
