@@ -2,20 +2,17 @@ mod state;
 pub mod mesh;
 pub mod camera;
 mod light;
+mod vertex;
+use cgmath::Point3;
+pub(crate) use vertex::Vertex;
 pub mod automata;
 
-mod vertex;
-pub(crate) use vertex::Vertex;
-
 use automata::Automata;
-use mesh::objects;
-use light::LightUniform;
 
-use std::{
-    time, 
-    sync, 
-    thread
-};
+use mesh::objects;
+use mesh::objects::MeshObject;
+
+use std::{time, sync::{Arc, Mutex}, thread};
 
 use winit::{
     event_loop,
@@ -23,8 +20,6 @@ use winit::{
     event,
     event::WindowEvent,
 };
-
-use cgmath::Point3;
 
 #[derive(Clone, Copy)]
 pub struct Config {
@@ -42,12 +37,67 @@ pub enum Lighting {
     VonNeumann
 }
 
+impl Lighting {
+    fn light_count(&self) -> usize {
+        match self {
+            Lighting::Bottom => 1,
+            Lighting::Center => 1,
+            Lighting::Corners => 8,
+            Lighting::VonNeumann => 6,
+        }
+    }
+}
+
 fn update_mesh_from_automata(
     mesh: &mut mesh::Mesh, 
     automata: &automata::Automata, 
-    states: &[(u8, [f32; 3])]) 
+    states: &[(u8, [f32; 3])], 
+    lighting: Lighting) 
 {
-    mesh.clear();
+    fn light(point: Point3<isize>) -> Box<objects::Cube> {
+        Box::new( {
+            let mut l = objects::Cube::new(point, [0.0; 3]);
+            l.set_emitter(Some([1.0, 1.0, 1.0, 4.0].into()));
+            l
+        } )
+    }
+    if mesh.len() == 0 {
+        let size_x = automata.size.x_len as isize;
+        let size_y = automata.size.y_len as isize;
+        let size_z = automata.size.z_len as isize;
+
+        let light_positions = match lighting {
+            Lighting::Bottom => vec![[size_x / 2, -2, size_z / 2]],
+            Lighting::Corners => {
+                vec![
+                    [-2; 3],
+                    [size_x + 1, -2, -2],
+                    [size_x + 1, size_y + 1, -2],
+                    [size_x + 1, size_y + 1, size_z + 1],
+                    [-2, size_y + 1, -2],
+                    [-2, size_y + 1, size_z + 1],
+                    [-2, -2, size_z + 1],
+                    [size_x + 1, -2, size_z + 1]
+                ]
+            }
+            Lighting::Center => vec![[size_x / 2, size_y / 2, size_z / 2]],
+            Lighting::VonNeumann => {
+                vec![
+                    [size_x / 2, -2, size_z / 2],
+                    [size_x / 2, size_y + 1, size_z / 2],
+                    [-2, size_y / 2, size_z / 2],
+                    [size_x + 1, size_y / 2, size_z / 2],
+                    [size_x / 2, size_y / 2, -2],
+                    [size_x / 2, size_y / 2, size_z + 1]
+                ]
+            }
+        };
+
+        light_positions
+            .into_iter()
+            .for_each(|pos| mesh.push(light(pos.into())));
+            
+    } else { mesh.truncate(lighting.light_count()); }
 
     for (point, cell_state) in automata.iter().with_coord() {
         let point = [
@@ -72,51 +122,19 @@ fn update_mesh_from_automata(
 pub async fn run<F: 'static>(config: Config, automata: Automata, state_function: F, states: &[(u8, [f32; 3])]) 
     where F: Fn(&Automata, Point3<usize>) -> u8 + Send + Sync + Copy {
 
+    let automata = Arc::new(Mutex::new(automata));
+
     // Contains all of the scene's geometry
     let mut mesh = mesh::Mesh::default();
 
-    // Initialize
+    // Initialize the mesh
+    //update_mesh_from_automata(&mut mesh, &automata);
+
     let event_loop = event_loop::EventLoop::new();
     let window = WindowBuilder::new().build(&event_loop).unwrap();
 
     // Contains ALL of the engine's mutable state...
     let mut state = state::State::new(&window, config).await;
-
-    let light_positions = match config.lighting {
-        Lighting::Bottom => vec![[automata.size.x_len as isize / 2, -2, automata.size.z_len as isize / 2]],
-        Lighting::Corners => {
-            vec![
-                [-2; 3],
-                [automata.size.x_len as isize + 1, -2, -2],
-                [automata.size.x_len as isize + 1, automata.size.y_len as isize + 1, -2],
-                [automata.size.x_len as isize + 1, automata.size.y_len as isize + 1, automata.size.z_len as isize + 1],
-                [-2, automata.size.y_len as isize + 1, -2],
-                [-2, automata.size.y_len as isize + 1, automata.size.z_len as isize + 1],
-                [-2, -2, automata.size.z_len as isize + 1],
-                [automata.size.x_len as isize + 1, -2, automata.size.z_len as isize + 1]
-            ]
-        }
-        Lighting::Center => vec![[automata.size.x_len as isize / 2, automata.size.y_len as isize / 2, automata.size.z_len as isize / 2]],
-        Lighting::VonNeumann => {
-            vec![
-                [automata.size.x_len as isize / 2, -2, automata.size.z_len as isize / 2],
-                [automata.size.x_len as isize / 2, automata.size.y_len as isize + 1, automata.size.z_len as isize / 2],
-                [-2, automata.size.y_len as isize / 2, automata.size.z_len as isize / 2],
-                [automata.size.x_len as isize + 1, automata.size.y_len as isize / 2, automata.size.z_len as isize / 2],
-                [automata.size.x_len as isize / 2, automata.size.y_len as isize / 2, -2],
-                [automata.size.x_len as isize / 2, automata.size.y_len as isize / 2, automata.size.z_len as isize + 1]
-            ]
-        }
-    };
-
-    for (i, pos) in light_positions.into_iter().enumerate() {
-        state.lighting.light_uniforms[i] = LightUniform {
-            position: [pos[0] as f32, pos[1] as f32, pos[2] as f32, 1.0],
-            color: [1.0, 1.0, 1.0, 4.0]
-        };
-    }
-
-    let automata = sync::Arc::new(sync::Mutex::new(automata));
 
     // ...except that related to frame time
     let fps = (config.fps as f32).recip();
@@ -136,7 +154,7 @@ pub async fn run<F: 'static>(config: Config, automata: Automata, state_function:
                 let start = length / config.thread_count * c;
                 let end = length / config.thread_count * (c + 1);
 
-                let automata_ref = sync::Arc::clone(&automata);
+                let automata_ref = Arc::clone(&automata);
                 threads.push(thread::spawn(move || {
                     let size = automata_ref.lock().unwrap().size;
                    
@@ -171,7 +189,7 @@ pub async fn run<F: 'static>(config: Config, automata: Automata, state_function:
                 automata.lock().unwrap().cells[index] = state;
             }
 
-            update_mesh_from_automata(&mut mesh, &automata.lock().unwrap(), &cell_states);
+            update_mesh_from_automata(&mut mesh, &automata.lock().unwrap(), &cell_states, config.lighting);
             accumulated_time -= fps;
         }
 
