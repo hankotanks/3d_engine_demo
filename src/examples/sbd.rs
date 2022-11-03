@@ -67,12 +67,12 @@ pub fn sbd_run() {
         states.push((i, [color.x, color.y, color.z]));
     }
 
-    pollster::block_on(run(
+    run(
         SBD_CONFIG,
         automata,
         sbd_update,
         &states
-    ));
+    );
 }
 
 fn sbd_update(automata: &automata::Automata, point: Point3<usize>) -> u8 {

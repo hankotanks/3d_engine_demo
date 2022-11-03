@@ -5,7 +5,7 @@ use wgpu::util::DeviceExt;
 use crate::{
     camera,
     Vertex,
-    mesh,
+    objects::MeshObject,
     light, 
     Config
 };
@@ -16,6 +16,7 @@ pub(crate) struct State {
     pub(crate) device: wgpu::Device,
     pub(crate) queue: wgpu::Queue,
     pub(crate) surface_config: wgpu::SurfaceConfiguration,
+    pub(crate) mesh: Vec<Box<dyn MeshObject>>,
     pub(crate) vertex_buffer: wgpu::Buffer,
     pub(crate) index_buffer: wgpu::Buffer,
     pub(crate) index_count: u32,
@@ -73,6 +74,8 @@ impl State {
         };
 
         surface.configure(&device, &surface_config);
+
+        let mesh = Vec::new();
 
         let vertex_buffer = device.create_buffer_init(
             &wgpu::util::BufferInitDescriptor {
@@ -155,7 +158,7 @@ impl State {
 
         let lighting = light::LightSources {
             light_uniforms: [
-                light::LightUniform::default(); 
+                light::Light::default(); 
                 light::MAX_LIGHT_SOURCES
             ]
         };
@@ -274,6 +277,7 @@ impl State {
             device,
             queue,
             surface_config,
+            mesh,
             vertex_buffer,
             index_buffer,
             index_count,
@@ -305,29 +309,44 @@ impl State {
         }
     }
 
-    pub fn redraw(&mut self) {
-        self.resize(self.size);
-    }
+    pub fn update(&mut self) {
+        let mut vertices = Vec::new();
+        let mut indices = Vec::new();
+        for object in self.mesh.iter() {
+            let mut data = object.build_object_data();
 
-    pub fn update(&mut self, mesh: &mesh::Mesh) {
-        let buffer_data = mesh.build_buffers(&self.device);
-        
-        self.vertex_buffer = buffer_data.vertex_buffer;
-        self.index_buffer = buffer_data.index_buffer;
-        self.index_count = buffer_data.index_count;
+            let mut offset_indices = data.indices
+                .iter()
+                .map(|i| *i + vertices.len() as u16)
+                .collect::<Vec<u16>>();
 
-        self.camera_uniform.update_projection(&self.camera);
-        self.queue.write_buffer(
-            &self.camera_buffer, 
-            0, 
-            bytemuck::cast_slice(&[self.camera_uniform])
+            indices.append(&mut offset_indices);
+            vertices.append(&mut data.vertices);
+        }
+
+        self.vertex_buffer = self.device.create_buffer_init(
+            &wgpu::util::BufferInitDescriptor {
+                label: None,
+                contents: bytemuck::cast_slice(vertices.as_slice()),
+                usage: wgpu::BufferUsages::VERTEX
+            }
         );
+
+        self.index_buffer = self.device.create_buffer_init(
+            &wgpu::util::BufferInitDescriptor {
+                label: None,
+                contents: bytemuck::cast_slice(indices.as_slice()),
+                usage: wgpu::BufferUsages::INDEX,
+            }
+        );
+
+        self.index_count = indices.len() as u32;
 
         // Update light sources
         let mut light_count = 0;
-        for object in mesh.objects.iter() {
-            if let Some(emitter) = object.emitter() {
-                self.lighting.light_uniforms[light_count].color = emitter.get();
+        for object in self.mesh.iter() {
+            if let Some(light) = object.light() {
+                self.lighting.light_uniforms[light_count].color = light;
                 self.lighting.light_uniforms[light_count].position = [
                     object.position().x as f32,
                     object.position().y as f32,
@@ -344,7 +363,13 @@ impl State {
             0, 
             bytemuck::cast_slice(&[self.lighting])
         );
-        // Finish updating light sources
+
+        self.camera_uniform.update_projection(&self.camera);
+        self.queue.write_buffer(
+            &self.camera_buffer, 
+            0, 
+            bytemuck::cast_slice(&[self.camera_uniform])
+        );
     }
 
     pub fn render(&mut self) -> Result<(), wgpu::SurfaceError> {

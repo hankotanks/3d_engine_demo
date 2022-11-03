@@ -3,17 +3,16 @@ use cgmath::Point3;
 use super::{
     MeshObject, 
     MeshObjectData, 
-    private, 
-    Emitter
+    private
 };
 
 use crate::Vertex;
 
-pub struct Cube {
+pub(crate) struct Cube {
     pub(crate) position: Point3<isize>,
     pub(crate) hw: f32,
     pub(crate) color: [f32; 3],
-    pub(crate) emitter: Option<Emitter>
+    pub(crate) light: Option<[f32; 4]>
 }
 
 impl Default for Cube {
@@ -22,7 +21,7 @@ impl Default for Cube {
             position: [0, 0, 0].into(), 
             hw: 0.5,
             color: [0.3, 0.3, 0.8],
-            emitter: None
+            light: None
         }
     }
 }
@@ -38,34 +37,19 @@ impl Cube {
 
 impl Cube {
     pub fn new(position: Point3<isize>, color: [f32; 3]) -> Self {
-        Self { position, hw: 0.5, color, emitter: None }
+        Self { position, hw: 0.5, color, light: None }
     }
 }
 
 impl MeshObject for Cube {
-    fn color(&self) -> [f32; 3] {
-        self.color
-    }
+    fn color(&self) -> [f32; 3] { self.color }
+    fn set_color(&mut self, color: [f32; 3]) { self.color = color; }
 
-    fn set_color(&mut self, color: [f32; 3]) {
-        self.color = color;
-    }
+    fn position(&self) -> Point3<isize> { self.position }
+    fn set_position(&mut self, position: Point3<isize>) { self.position = position; }
 
-    fn position(&self) -> Point3<isize> {
-        self.position
-    }
-
-    fn set_position(&mut self, position: Point3<isize>) {
-        self.position = position;
-    }
-
-    fn emitter(&self) -> Option<Emitter> {
-        self.emitter
-    }
-
-    fn set_emitter(&mut self, emitter: Option<Emitter>) {
-        self.emitter = emitter;
-    }
+    fn light(&self) -> Option<[f32; 4]> { self.light }
+    fn set_light(&mut self, light: Option<[f32; 4]>) { self.light = light; }
 }
 
 impl private::MeshObject for Cube {
@@ -87,7 +71,7 @@ impl private::MeshObject for Cube {
             [ center.x + self.hw, center.y + self.hw, center.z - self.hw ]
         ];
 
-        let normals = if self.emitter.is_none() {
+        let normals = if self.light.is_none() {
             [
                 Self::FRONT, 
                 Self::BACK, 

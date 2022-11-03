@@ -20,12 +20,12 @@ pub fn ww_run(file_name: &str) -> Result<(), io::Error> {
     };
     config.camera_config.rotate_speed = None;
 
-    pollster::block_on(run(
+    run(
         config,
         automata,
         ww_update,
         &[(1, [1.0, 0.2, 0.0]), (2, [1.0; 3]), (3, [0.0, 0.2, 1.0])]
-    ));
+    );
 
     Ok(())
 }

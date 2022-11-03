@@ -20,6 +20,12 @@ impl From<[usize; 3]> for Size {
     }
 }
 
+impl Size {
+    pub(crate) fn cell_count(&self) -> usize {
+        self.x_len * self.y_len * self.z_len
+    }
+}
+
 pub struct Automata {
     pub(crate) cells: Vec<u8>,
     pub size: Size
@@ -29,21 +35,27 @@ impl Index<Point3<usize>> for Automata {
     type Output = u8;
 
     fn index(&self, index: Point3<usize>) -> &Self::Output {
-        let cell_index = index.x + index.y * self.size.x_len * self.size.z_len + index.z * self.size.x_len;
-        if cell_index < self.cells.len() {
-            return &self.cells[cell_index];
-        }
+        let cell_index = {
+            index.x + 
+            index.y * self.size.x_len * self.size.z_len + 
+            index.z * self.size.x_len 
+        };
 
-        &0
+        if cell_index < self.cells.len() { return &self.cells[cell_index]; }
+
+        panic!();
     }
 }
 
 impl IndexMut<Point3<usize>> for Automata {
     fn index_mut(&mut self, index: Point3<usize>) -> &mut Self::Output {
-        let cell_index = index.x + index.y * self.size.x_len * self.size.z_len + index.z * self.size.x_len;
-        if cell_index < self.cells.len() {
-            return &mut self.cells[cell_index];
-        }
+        let cell_index = {
+            index.x + 
+            index.y * self.size.x_len * self.size.z_len + 
+            index.z * self.size.x_len 
+        };
+
+        if cell_index < self.cells.len() { return &mut self.cells[cell_index]; }
 
         panic!();
     }
@@ -58,7 +70,7 @@ impl<'a> Iterator for StateIterator<'a> {
     type Item = u8;
 
     fn next(&mut self) -> Option<Self::Item> {
-        if self.index < self.automata.size.x_len * self.automata.size.y_len * self.automata.size.z_len {
+        if self.index < self.automata.size.cell_count() {
             self.index += 1;
 
             return Some(self.automata.cells[self.index - 1])
@@ -82,21 +94,12 @@ impl<'a> Iterator for CellIterator<'a> {
     type Item = (Point3<usize>, u8);
 
     fn next(&mut self) -> Option<Self::Item> {
-        let current_index = self.state_iterator.index;
-        let current_state = self.state_iterator.next();
+        let point = automata_index_to_point(
+            self.state_iterator.automata.size, 
+            self.state_iterator.index
+        );
 
-        let size = self.state_iterator.automata.size;
-        match current_state {
-            Some(state) => {
-                let y = current_index / (size.x_len * size.z_len);
-                let index = current_index - y * size.x_len * size.z_len;
-                let z = index / size.x_len;
-                let x = index % size.x_len;
-
-                Some(([x, y, z].into(), state))
-            },
-            None => None
-        }
+        self.state_iterator.next().map(|state| (point, state))
     }
 }
 
@@ -109,18 +112,10 @@ impl Iterator for CoordIterator {
     type Item = Point3<usize>;
 
     fn next(&mut self) -> Option<Self::Item> {
-        if self.index >= self.size.x_len * self.size.y_len * self.size.z_len {
-            return None;
-        }
-
-        let y = self.index / (self.size.x_len * self.size.z_len);
-        let index = self.index - y * self.size.x_len * self.size.z_len;
-        let z = index / self.size.x_len;
-        let x = index % self.size.x_len;
-
+        if self.index >= self.size.cell_count() { return None; }
         self.index += 1;
 
-        Some([x, y, z].into())
+        Some(automata_index_to_point(self.size, self.index - 1))
     }
 }
 
@@ -137,7 +132,7 @@ impl Automata {
 
 impl Automata {
     pub fn new(size: Size) -> Self {
-        let cells = vec![0; size.x_len * size.y_len * size.z_len];
+        let cells = vec![0; size.cell_count()];
 
         Self { cells, size }
     }
@@ -151,27 +146,20 @@ impl Automata {
                     buffer.remove(0) as usize
                 ].into());
 
-                let length = automata.size.x_len * automata.size.y_len * automata.size.z_len;
-                if buffer.len() > length { buffer.truncate(length); } 
-                else if buffer.len() < length { buffer.resize(length, 0); }
+                let length = automata.size.cell_count();
+
+                use std::cmp::Ordering::*;
+                match buffer.len().cmp(&length) {
+                    Less => buffer.resize(length, 0),
+                    Greater | Equal => buffer.truncate(length)
+                }
+
                 automata.cells = buffer;
 
                 Ok(automata)
             },
-            Err(err) => { return Result::Err(err); }
+            Err(e) => Err(e)
         }
-    }
-
-    fn wrap_coord(&self, coord: Point3<isize>) -> Point3<usize> {
-        let mut x = coord.x % self.size.x_len as isize;
-        let mut y = coord.y % self.size.y_len as isize;
-        let mut z = coord.z % self.size.z_len as isize;
-
-        if x < 0 { x += self.size.x_len as isize; }
-        if y < 0 { y += self.size.y_len as isize; }
-        if z < 0 { z += self.size.z_len as isize; }
-        
-        [ x as usize, y as usize, z as usize ].into()
     }
 
     pub fn moore_neighborhood(&self, index: Point3<usize>) -> Vec<Point3<usize>> {
@@ -183,7 +171,7 @@ impl Automata {
                 for z in -1..=1isize {
                     let z = index.z as isize + z;
 
-                    let target = self.wrap_coord([x, y, z].into());
+                    let target = wrap_coord(self.size, [x, y, z].into());
                     if target != index { neighbors.push(target); }
                 }
             }
@@ -204,13 +192,37 @@ impl Automata {
 
         let mut neighbors = Vec::new();
         for offset in offsets.into_iter() {
-            neighbors.push(self.wrap_coord(Point3::new(
-                offset[0] + index.x as isize,
-                offset[1] + index.y as isize,
-                offset[2] + index.z as isize
-            )));
+            neighbors.push(wrap_coord(
+                self.size, 
+                Point3::new(
+                    offset[0] + index.x as isize,
+                    offset[1] + index.y as isize,
+                    offset[2] + index.z as isize
+                )
+            ));
         }
 
         neighbors 
     }
+}
+
+pub(crate) fn automata_index_to_point(size: Size, mut index: usize) -> Point3<usize> {
+    let y = index / (size.x_len * size.z_len);
+    index -= y * size.x_len * size.z_len;
+    let z = index / size.x_len;
+    let x = index % size.x_len;
+
+    Point3::new(x, y, z)
+}
+
+fn wrap_coord(size: Size, coord: Point3<isize>) -> Point3<usize> {
+    let mut x = coord.x % size.x_len as isize;
+    let mut y = coord.y % size.y_len as isize;
+    let mut z = coord.z % size.z_len as isize;
+
+    if x < 0 { x += size.x_len as isize; }
+    if y < 0 { y += size.y_len as isize; }
+    if z < 0 { z += size.z_len as isize; }
+    
+    [ x as usize, y as usize, z as usize ].into()
 }

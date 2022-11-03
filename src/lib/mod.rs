@@ -1,18 +1,22 @@
 mod state;
-pub mod mesh;
-pub mod camera;
 mod light;
-mod vertex;
-use cgmath::Point3;
-pub(crate) use vertex::Vertex;
+pub mod camera;
+
+mod objects;
+use objects::MeshObject;
+
 pub mod automata;
-
 use automata::Automata;
+use automata::automata_index_to_point;
 
-use mesh::objects;
-use mesh::objects::MeshObject;
+mod vertex;
+pub(crate) use vertex::Vertex;
 
-use std::{time, sync::{Arc, Mutex}, thread};
+use std::{
+    time, 
+    sync, 
+    thread
+};
 
 use winit::{
     event_loop,
@@ -20,6 +24,8 @@ use winit::{
     event,
     event::WindowEvent,
 };
+
+use cgmath::Point3;
 
 #[derive(Clone, Copy)]
 pub struct Config {
@@ -48,99 +54,82 @@ impl Lighting {
     }
 }
 
-fn update_mesh_from_automata(
-    mesh: &mut mesh::Mesh, 
-    automata: &automata::Automata, 
-    states: &[(u8, [f32; 3])], 
-    lighting: Lighting) 
-{
-    fn light(point: Point3<isize>) -> Box<objects::Cube> {
-        Box::new( {
-            let mut l = objects::Cube::new(point, [0.0; 3]);
-            l.set_emitter(Some([1.0, 1.0, 1.0, 4.0].into()));
-            l
-        } )
-    }
-    if mesh.len() == 0 {
-        let size_x = automata.size.x_len as isize;
-        let size_y = automata.size.y_len as isize;
-        let size_z = automata.size.z_len as isize;
-
-        let light_positions = match lighting {
-            Lighting::Bottom => vec![[size_x / 2, -2, size_z / 2]],
-            Lighting::Corners => {
-                vec![
-                    [-2; 3],
-                    [size_x + 1, -2, -2],
-                    [size_x + 1, size_y + 1, -2],
-                    [size_x + 1, size_y + 1, size_z + 1],
-                    [-2, size_y + 1, -2],
-                    [-2, size_y + 1, size_z + 1],
-                    [-2, -2, size_z + 1],
-                    [size_x + 1, -2, size_z + 1]
-                ]
-            }
-            Lighting::Center => vec![[size_x / 2, size_y / 2, size_z / 2]],
-            Lighting::VonNeumann => {
-                vec![
-                    [size_x / 2, -2, size_z / 2],
-                    [size_x / 2, size_y + 1, size_z / 2],
-                    [-2, size_y / 2, size_z / 2],
-                    [size_x + 1, size_y / 2, size_z / 2],
-                    [size_x / 2, size_y / 2, -2],
-                    [size_x / 2, size_y / 2, size_z + 1]
-                ]
-            }
-        };
-
-        light_positions
-            .into_iter()
-            .for_each(|pos| mesh.push(light(pos.into())));
-            
-    } else { mesh.truncate(lighting.light_count()); }
-
-    for (point, cell_state) in automata.iter().with_coord() {
-        let point = [
-            point.x as isize,
-            point.y as isize,
-            point.z as isize
-        ].into();
-        
-        'builder: for (state, color) in states.iter().cloned() {
-            if state == cell_state {
-                mesh.push(Box::new(objects::Cube::new(
-                    point,
-                    color
-                )));    
-
-                break 'builder;
-            }
-        }
-    }
+pub fn run<F: 'static>(config: Config, automata: Automata, state_function: F, states: &[(u8, [f32; 3])]) 
+    where F: Fn(&Automata, Point3<usize>) -> u8 + Send + Sync + Copy {
+    pollster::block_on(run_automata(
+        config,
+        automata,
+        state_function,
+        states
+    ));
 }
 
-pub async fn run<F: 'static>(config: Config, automata: Automata, state_function: F, states: &[(u8, [f32; 3])]) 
+async fn run_automata<F: 'static>(config: Config, automata: Automata, state_function: F, states: &[(u8, [f32; 3])]) 
     where F: Fn(&Automata, Point3<usize>) -> u8 + Send + Sync + Copy {
 
-    let automata = Arc::new(Mutex::new(automata));
-
-    // Contains all of the scene's geometry
-    let mut mesh = mesh::Mesh::default();
-
-    // Initialize the mesh
-    //update_mesh_from_automata(&mut mesh, &automata);
-
+    // Initialize the Window and EventLoop
     let event_loop = event_loop::EventLoop::new();
     let window = WindowBuilder::new().build(&event_loop).unwrap();
 
     // Contains ALL of the engine's mutable state...
     let mut state = state::State::new(&window, config).await;
 
+    // Get a copy of the Automata's Size member
+    let size = automata.size;
+
+    // generate all of the light positions
+    let light_positions;
+    {
+        let width = size.x_len as isize;
+        let height = size.y_len as isize;
+        let depth = size.z_len as isize;
+
+        light_positions = match config.lighting {
+            Lighting::Bottom => vec![[width / 2, -2, depth / 2]],
+            Lighting::Corners => vec![
+                [-2; 3],
+                [width + 1, -2, -2],
+                [width + 1, height + 1, -2],
+                [width + 1, height + 1, depth + 1],
+                [-2, height + 1, -2],
+                [-2, height + 1, depth + 1],
+                [-2, -2, depth + 1],
+                [width + 1, -2, depth + 1]
+            ],
+            Lighting::Center => vec![[width / 2, height / 2, depth / 2]],
+            Lighting::VonNeumann => vec![
+                [width / 2, -2, depth / 2],
+                [width / 2, height + 1, depth / 2],
+                [-2, height / 2, depth / 2],
+                [width + 1, height / 2, depth / 2],
+                [width / 2, height / 2, -2],
+                [width / 2, height / 2, depth + 1]
+            ]
+        };
+    } 
+
+    // Helper function to quickly get LightCubes
+    fn light(point: Point3<isize>) -> Box<objects::Gap> {
+        let mut light = objects::Gap::new(point);
+        light.set_light(Some([1.0, 1.0, 1.0, 4.0]));
+        
+        Box::new(light)
+    }
+
+    // Push every light source to the Mesh
+    light_positions
+        .into_iter()
+        .for_each(|pos| state.mesh.push(light(pos.into())));
+
+    // Wrap the Automata in an Arc so references can be handed to subthreads
+    let automata = sync::Arc::new(sync::Mutex::new(automata));
+
     // ...except that related to frame time
     let fps = (config.fps as f32).recip();
     let mut accumulated_time = 0.0;
     let mut current = time::Instant::now();
 
+    // Allow the cell states to be passed between threads
     let cell_states = states.to_vec();
 
     // The game loop itself
@@ -154,21 +143,13 @@ pub async fn run<F: 'static>(config: Config, automata: Automata, state_function:
                 let start = length / config.thread_count * c;
                 let end = length / config.thread_count * (c + 1);
 
-                let automata_ref = Arc::clone(&automata);
+                let automata_ref = sync::Arc::clone(&automata);
                 threads.push(thread::spawn(move || {
-                    let size = automata_ref.lock().unwrap().size;
-                   
                     let mut updated_states: Vec<(usize, u8)> = Vec::new();
                     for i in start..end {
-                        let y = i / (size.x_len * size.z_len);
-                        let index = i - y * size.x_len * size.z_len;
-                        let z = index / size.x_len;
-                        let x = index % size.x_len;
-    
-                        let target = [x, y, z].into();
                         let state = state_function(
                             &automata_ref.lock().unwrap(), 
-                            target
+                            automata_index_to_point(size, i)
                         );
 
                         if state != automata_ref.lock().unwrap().cells[i] {
@@ -180,25 +161,52 @@ pub async fn run<F: 'static>(config: Config, automata: Automata, state_function:
                 } ));
             }
 
+            // Assemble a vec of all changed cell states
             let mut updated_states: Vec<(usize, u8)> = Vec::new();
             for handle in threads.drain(0..) {
                 updated_states.append(&mut handle.join().unwrap());
             }
 
+            // Write the changed cell states
             for (index, state) in updated_states.drain(0..) {
                 automata.lock().unwrap().cells[index] = state;
             }
 
-            update_mesh_from_automata(&mut mesh, &automata.lock().unwrap(), &cell_states, config.lighting);
+            // Truncate the mesh to retain ONLY light sources
+            state.mesh.truncate(config.lighting.light_count());
+
+            // Update the mesh to account for changed cell states
+            let automata_temp = automata.lock().unwrap();
+            for (point, current_state) in automata_temp.iter().with_coord() {
+                let point = [
+                    point.x as isize,
+                    point.y as isize,
+                    point.z as isize
+                ].into();
+                
+                // Find the appropriate state, and draw the right-colored cell
+                'builder: for (cell_state, color) in cell_states.iter().cloned() {
+                    if cell_state == current_state {
+                        state.mesh.push(Box::new(objects::Cube::new(
+                            point,
+                            color
+                        )));    
+        
+                        break 'builder;
+                    }
+                }
+            }
+
+            // Update loop clock
             accumulated_time -= fps;
         }
 
         match event {
             event::Event::RedrawRequested(w_id) if w_id == window.id() => {
-                state.update(&mesh);
+                state.update();
                 match state.render() {
                     Ok(..) => {  },
-                    Err(wgpu::SurfaceError::Lost) => state.redraw(),
+                    Err(wgpu::SurfaceError::Lost) => state.resize(state.size),
                     Err(wgpu::SurfaceError::OutOfMemory) => {
                         *control_flow = event_loop::ControlFlow::Exit 
                     },
