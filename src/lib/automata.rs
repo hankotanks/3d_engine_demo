@@ -21,7 +21,11 @@ impl From<[usize; 3]> for Size {
 }
 
 impl Size {
-    pub(crate) fn cell_count(&self) -> usize {
+    pub(crate) const fn center(&self) -> Point3<usize> {
+        Point3::new(self.x_len / 2, self.y_len / 2, self.z_len / 2)
+    }
+
+    pub(crate) const fn cell_count(&self) -> usize {
         self.x_len * self.y_len * self.z_len
     }
 }

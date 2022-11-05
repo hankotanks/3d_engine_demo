@@ -14,7 +14,7 @@ pub(crate) use vertex::Vertex;
 
 use std::{
     time, 
-    sync, 
+    sync,
     thread
 };
 
@@ -28,10 +28,11 @@ use winit::{
 use cgmath::Point3;
 
 #[derive(Clone, Copy)]
-pub struct Config {
+pub struct Config<'a> {
     pub fps: usize,
     pub thread_count: usize,
     pub lighting: Lighting,
+    pub states: &'a [(u8, [f32; 3])],
     pub camera_config: camera::CameraConfig
 }
 
@@ -54,25 +55,24 @@ impl Lighting {
     }
 }
 
-pub fn run<F: 'static>(config: Config, automata: Automata, state_function: F, states: &[(u8, [f32; 3])]) 
-    where F: Fn(&Automata, Point3<usize>) -> u8 + Send + Sync + Copy {
+pub fn run<F: 'static>(config: Config, automata: Automata, state_function: F) 
+    where F: FnMut(&Automata, Point3<usize>) -> u8 + Send + Sync + Copy {
     pollster::block_on(run_automata(
         config,
         automata,
-        state_function,
-        states
+        state_function
     ));
 }
 
-async fn run_automata<F: 'static>(config: Config, automata: Automata, state_function: F, states: &[(u8, [f32; 3])]) 
-    where F: Fn(&Automata, Point3<usize>) -> u8 + Send + Sync + Copy {
+async fn run_automata<'a, F: 'static>(config: Config<'a>, automata: Automata, mut state_function: F) 
+    where F: FnMut(&Automata, Point3<usize>) -> u8 + Send + Sync + Copy {
 
     // Initialize the Window and EventLoop
     let event_loop = event_loop::EventLoop::new();
     let window = WindowBuilder::new().build(&event_loop).unwrap();
 
     // Contains ALL of the engine's mutable state...
-    let mut state = state::State::new(&window, config).await;
+    let mut state = state::State::new(&window, &config).await;
 
     // Get a copy of the Automata's Size member
     let size = automata.size;
@@ -130,7 +130,7 @@ async fn run_automata<F: 'static>(config: Config, automata: Automata, state_func
     let mut current = time::Instant::now();
 
     // Allow the cell states to be passed between threads
-    let cell_states = states.to_vec();
+    let cell_states = config.states.to_vec();
 
     // The game loop itself
     event_loop.run(move |event, _, control_flow| {

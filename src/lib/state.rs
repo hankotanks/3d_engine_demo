@@ -33,7 +33,7 @@ pub(crate) struct State {
 }
 
 impl State {
-    pub async fn new(window: &window::Window, config: Config) -> Self {
+    pub async fn new<'a>(window: &window::Window, config: &Config<'a>) -> Self {
         let size = window.inner_size();
 
         let instance = wgpu::Instance::new(wgpu::Backends::all());

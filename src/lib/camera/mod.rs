@@ -8,6 +8,8 @@ use cgmath::{
     EuclideanSpace
 };
 
+use crate::automata;
+
 #[derive(Clone, Copy)]
 pub struct CameraConfig {
     pub target: Option<Point3<isize>>,
@@ -33,15 +35,36 @@ impl Default for CameraConfig {
     }
 }
 
-pub const fn birds_eye_camera(x_len: usize, z_len: usize) -> CameraConfig {
+pub const fn birds_eye_camera(size: automata::Size) -> CameraConfig {
+    let center = size.center();
+    let center = Point3::new(center.x as isize, 1, center.z as isize);
+
     CameraConfig { 
-        target: Some(Point3::new((x_len / 2) as isize, 1, (z_len / 2) as isize)),
-        distance: Some((x_len + z_len) as f32),        
+        target: Some(center),
+        distance: Some((size.x_len + size.z_len) as f32),        
         pitch: None,
         yaw: Some(0.0),
         aspect: None, 
         zoom_speed: None,
         rotate_speed: Some(0.0)
+    }
+}
+
+pub const fn free_camera(size: automata::Size) -> CameraConfig {
+    let center = Point3::new(
+        size.center().x as isize, 
+        size.center().y as isize, 
+        size.center().z as isize
+    );
+
+    CameraConfig {
+        target: Some(center),
+        distance: Some(((center.x + center.y + center.z) / 3) as f32),
+        pitch: None,
+        yaw: None,
+        aspect: None,
+        zoom_speed: None,
+        rotate_speed: None
     }
 }
 
