@@ -7,7 +7,6 @@ use objects::MeshObject;
 
 pub mod automata;
 use automata::Automata;
-use automata::automata_index_to_point;
 
 mod vertex;
 pub(crate) use vertex::Vertex;
@@ -148,8 +147,15 @@ async fn run_automata<'a, F: 'static>(config: Config<'a>, automata: Automata, mu
                     let mut updated_states: Vec<(usize, u8)> = Vec::new();
                     for i in start..end {
                         let state = state_function(
-                            &automata_ref.lock().unwrap(), 
-                            automata_index_to_point(size, i)
+                            &automata_ref.lock().unwrap(),
+                            {
+                                let y = i / (size.x_len * size.z_len);
+                                let j = i - y * size.x_len * size.z_len;
+                                let z = j / size.x_len;
+                                let x = j % size.x_len;
+
+                                [x, y, z].into()
+                            }
                         );
 
                         if state != automata_ref.lock().unwrap().cells[i] {
@@ -162,14 +168,11 @@ async fn run_automata<'a, F: 'static>(config: Config<'a>, automata: Automata, mu
             }
 
             // Assemble a vec of all changed cell states
-            let mut updated_states: Vec<(usize, u8)> = Vec::new();
             for handle in threads.drain(0..) {
-                updated_states.append(&mut handle.join().unwrap());
-            }
-
-            // Write the changed cell states
-            for (index, state) in updated_states.drain(0..) {
-                automata.lock().unwrap().cells[index] = state;
+                // Write the changed cell states
+                for (index, state) in handle.join().unwrap().drain(0..) {
+                    automata.lock().unwrap().cells[index] = state;
+                }
             }
 
             // Truncate the mesh to retain ONLY light sources
@@ -177,7 +180,8 @@ async fn run_automata<'a, F: 'static>(config: Config<'a>, automata: Automata, mu
 
             // Update the mesh to account for changed cell states
             let automata_temp = automata.lock().unwrap();
-            for (point, current_state) in automata_temp.iter().with_coord() {
+            for point in automata_temp.iter() {
+                let current_state = automata_temp[point];
                 let point = [
                     point.x as isize,
                     point.y as isize,

@@ -38,7 +38,7 @@ pub fn survive_birth_decay(size: Size, s: Range<usize>, b: Range<usize>, d: u8) 
 
     let mut automata = automata::Automata::new(size);
     let mut prng = rand::thread_rng();
-    for cell in automata.iter_coords() {
+    for cell in automata.iter() {
         if prng.gen_bool(0.5f64) { automata[cell] = prng.gen_range(1u8..d); }
     }
 

@@ -19,7 +19,7 @@ pub fn game_of_life(size: automata::Size) {
     };
 
     let mut automata = automata::Automata::new(size);
-    'coord: for coord in automata.iter_coords() {
+    'coord: for coord in automata.iter() {
         if coord.y != 1 { continue 'coord; }
         if rand::thread_rng().gen_bool(0.5f64) { automata[coord] = 1; }
     }
