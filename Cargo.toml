@@ -10,6 +10,8 @@ bytemuck = { version = "1.4", features = [ "derive" ] }
 cgmath = "0.18"
 pollster = "0.2"
 rand = "0.8.5"
+itertools = "*"
+rayon = "1.5.3"
 
 [[bin]]
 name = "block_engine_wgpu"

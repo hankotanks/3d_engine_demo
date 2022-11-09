@@ -9,7 +9,7 @@ use super::{
 use crate::Vertex;
 
 pub(crate) struct Cube {
-    pub(crate) position: Point3<isize>,
+    pub(crate) position: Point3<i16>,
     pub(crate) hw: f32,
     pub(crate) color: [f32; 3],
     pub(crate) light: Option<[f32; 4]>
@@ -36,7 +36,7 @@ impl Cube {
 }
 
 impl Cube {
-    pub fn new(position: Point3<isize>, color: [f32; 3]) -> Self {
+    pub fn new(position: Point3<i16>, color: [f32; 3]) -> Self {
         Self { position, hw: 0.5, color, light: None }
     }
 }
@@ -45,8 +45,8 @@ impl MeshObject for Cube {
     fn color(&self) -> [f32; 3] { self.color }
     fn set_color(&mut self, color: [f32; 3]) { self.color = color; }
 
-    fn position(&self) -> Point3<isize> { self.position }
-    fn set_position(&mut self, position: Point3<isize>) { self.position = position; }
+    fn position(&self) -> Point3<i16> { self.position }
+    fn set_position(&mut self, position: Point3<i16>) { self.position = position; }
 
     fn light(&self) -> Option<[f32; 4]> { self.light }
     fn set_light(&mut self, light: Option<[f32; 4]>) { self.light = light; }

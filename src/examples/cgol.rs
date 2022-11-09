@@ -31,12 +31,9 @@ pub fn game_of_life(size: automata::Size) {
     }
 
     run(config, automata, |ca, i| {
-        if i.y == 1 {
-            let adj = ca.moore_neighborhood(i)
-                .iter()
-                .fold(0, |count, j| count + ca[*j] );
-
-            match ca[i] {
+        if i == 1 {
+            let adj = ca.living();
+            match i {
                 1 if (2..=3).contains(&adj) => 1,
                 0 if adj == 3 => 1,
                 _ => 0

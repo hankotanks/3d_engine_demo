@@ -38,19 +38,23 @@ pub fn survive_birth_decay(size: Size, s: Range<usize>, b: Range<usize>, d: u8) 
 
     let mut automata = automata::Automata::new(size);
     let mut prng = rand::thread_rng();
-    for cell in automata.iter() {
-        if prng.gen_bool(0.5f64) { automata[cell] = prng.gen_range(1u8..d); }
-    }
+    [-1i16, 0, 1].iter().for_each(|&x| [-1i16, 0, 1].iter().for_each(|&y| [-1i16, 0, 1].iter().for_each(|&z| {
+        if prng.gen_bool(0.5f64) { 
+            let cell = cgmath::Point3::new(
+                x + (size.x_len / 2) as i16 - 1,
+                y + (size.y_len / 2) as i16 - 1,
+                z + (size.z_len / 2) as i16 - 1
+            );
+
+            automata[cell] = prng.gen_range(1u8..d);
+        }
+    } )));
 
     let (ss, se, bs, be) = (s.start, s.end, b.start, b.end);
 
     run(config, automata, move |ca, i| {
-        let neighbors = ca.moore_neighborhood(i)
-                .iter()
-                .fold(0, |count, adj| if ca[*adj] != 0 { count + 1 } else { count } );
-
-        let current = ca[i];
-        match current {
+        let neighbors = ca.living();
+        match i {
             1 =>  (ss..se).contains(&neighbors) as u8,
             0 =>  if (bs..be).contains(&neighbors) { d - 1 } else { 0 },
             state => state - 1

@@ -11,12 +11,12 @@ fn read(file_name: &str) -> Result<(automata::Size, automata::Automata), io::Err
     match fs::read(file_name) {
         Ok(mut buffer) => {
             let size: automata::Size = [
-                buffer.remove(0) as usize, 
-                buffer.remove(0) as usize, 
-                buffer.remove(0) as usize
+                buffer.remove(0) as u8, 
+                buffer.remove(0) as u8, 
+                buffer.remove(0) as u8
             ].into();
 
-            let length = size.x_len * size.y_len * size.z_len;
+            let length = (size.x_len * size.y_len * size.z_len) as usize;
 
             let mut automata = automata::Automata::new(size);
 
@@ -27,12 +27,12 @@ fn read(file_name: &str) -> Result<(automata::Size, automata::Automata), io::Err
             }
 
             for (index, state) in buffer.drain(0..).enumerate() {
-                let y = index / (size.x_len * size.z_len);
-                let j = index - y * size.x_len * size.z_len;
-                let z = j / size.x_len;
-                let x = j % size.x_len;
+                let y = index / (size.x_len * size.z_len) as usize;
+                let j = index - y * (size.x_len * size.z_len) as usize;
+                let z = j / size.x_len as usize;
+                let x = j % size.x_len as usize;
 
-                automata[[x, y, z].into()] = state;
+                automata[[x as i16, y as i16, z as i16].into()] = state;
             }
 
             Ok((size, automata))
@@ -61,17 +61,14 @@ pub fn ww_run(file_name: &str) -> Result<(), io::Error> {
     };
 
     run(config, automata, |ca, i| {
-        match ca[i] {
+        match i {
             1 => {
-                let adj = ca.moore_neighborhood(i)
-                    .iter()
-                    .fold(0, |count, adj| count + (ca[*adj] == 2) as i32);
-
+                let adj = ca.count(2);
                 if (1..=2).contains(&adj) { 2 } else { 1 }
             },
             2 => 3,
             3 => 1,
-            _ => ca[i]
+            _ => i
         }
     } );
 

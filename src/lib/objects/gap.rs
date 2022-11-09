@@ -7,7 +7,7 @@ use super::{
 use cgmath::Point3;
 
 pub(crate) struct Gap {
-    pub(crate) position: Point3<isize>,
+    pub(crate) position: Point3<i16>,
     pub(crate) light: Option<[f32; 4]>
 }
 
@@ -21,7 +21,7 @@ impl Default for Gap {
 }
 
 impl Gap {
-    pub fn new(position: Point3<isize>) -> Self {
+    pub fn new(position: Point3<i16>) -> Self {
         Self { position, light: None }
     }
 }
@@ -30,8 +30,8 @@ impl MeshObject for Gap {
     fn color(&self) -> [f32; 3] { [0.0; 3] }
     fn set_color(&mut self, _color: [f32; 3]) {  }
 
-    fn position(&self) -> Point3<isize> { self.position }
-    fn set_position(&mut self, position: Point3<isize>) { self.position = position; }
+    fn position(&self) -> Point3<i16> { self.position }
+    fn set_position(&mut self, position: Point3<i16>) { self.position = position; }
 
     fn light(&self) -> Option<[f32; 4]> { self.light }
     fn set_light(&mut self, light: Option<[f32; 4]>) { self.light = light; }

@@ -12,7 +12,7 @@ use crate::automata;
 
 #[derive(Clone, Copy)]
 pub struct CameraConfig {
-    pub target: Option<Point3<isize>>,
+    pub target: Option<Point3<i16>>,
     pub distance: Option<f32>,
     pub pitch: Option<f32>,
     pub yaw: Option<f32>,
@@ -37,7 +37,7 @@ impl Default for CameraConfig {
 
 pub const fn birds_eye_camera(size: automata::Size) -> CameraConfig {
     let center = size.center();
-    let center = Point3::new(center.x as isize, 1, center.z as isize);
+    let center = Point3::new(center.x as i16, 1, center.z as i16);
 
     CameraConfig { 
         target: Some(center),
@@ -51,11 +51,7 @@ pub const fn birds_eye_camera(size: automata::Size) -> CameraConfig {
 }
 
 pub const fn free_camera(size: automata::Size) -> CameraConfig {
-    let center = Point3::new(
-        size.center().x as isize, 
-        size.center().y as isize, 
-        size.center().z as isize
-    );
+    let center = size.center();
 
     CameraConfig {
         target: Some(center),
@@ -246,9 +242,8 @@ impl Default for CameraBounds {
     }
 }
     
-
 #[repr(C)]
-#[derive(Copy, Clone, bytemuck::Pod, bytemuck::Zeroable)]
+#[derive(Clone, Copy, bytemuck::Pod, bytemuck::Zeroable)]
 pub(crate) struct CameraUniform {
     pub(crate) position: [f32; 4],
     pub(crate) projection: [[f32; 4]; 4]
