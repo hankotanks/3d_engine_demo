@@ -1,4 +1,4 @@
-use std::{io, fs};
+use std::{io, fs, collections::HashMap};
 
 use block_engine_wgpu::{
     automata, 
@@ -49,7 +49,14 @@ pub fn ww_run(file_name: &str) -> Result<(), io::Error> {
         fps: 10,
         thread_count: 4,
         lighting: Lighting::Corners,
-        states: &[(1, [1.0, 0.2, 0.0]), (2, [1.0; 3]), (3, [0.0, 0.2, 1.0])],
+        states: {
+            let mut states = HashMap::new();
+            states.insert(1, [1.0, 0.2, 0.0]);
+            states.insert(2, [1.0; 3]);
+            states.insert(3, [0.0, 0.2, 1.0]);
+
+            states
+        },
         camera_config: free_camera(size)
     };
 

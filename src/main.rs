@@ -8,5 +8,6 @@ use examples::{
 };
 
 fn main() {
-    survive_birth_decay([13; 3].into(), 4..6, 2..3, 40);
+    //survive_birth_decay([17; 3].into(), 4..7, 14..17, 5);
+    game_of_life([201, 3, 201].into());
 }

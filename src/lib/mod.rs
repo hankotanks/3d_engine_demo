@@ -14,7 +14,7 @@ pub(crate) use vertex::Vertex;
 use std::{
     time, 
     sync,
-    thread
+    thread::{self, JoinHandle}, collections::HashMap
 };
 
 use winit::{
@@ -26,12 +26,12 @@ use winit::{
 
 use cgmath::Point3;
 
-#[derive(Clone, Copy)]
-pub struct Config<'a> {
+#[derive(Clone)]
+pub struct Config {
     pub fps: usize,
     pub thread_count: usize,
     pub lighting: Lighting,
-    pub states: &'a [(u8, [f32; 3])],
+    pub states: HashMap<u8, [f32; 3]>,
     pub camera_config: camera::CameraConfig
 }
 
@@ -63,7 +63,7 @@ pub fn run<F: 'static>(config: Config, automata: Automata, state_function: F)
     ));
 }
 
-async fn run_automata<'a, F: 'static>(config: Config<'a>, automata: Automata, mut state_function: F) 
+async fn run_automata<F: 'static>(config: Config, automata: Automata, state_function: F) 
     where F: FnMut(&Automata, Point3<usize>) -> u8 + Send + Sync + Copy {
 
     // Initialize the Window and EventLoop
@@ -128,86 +128,59 @@ async fn run_automata<'a, F: 'static>(config: Config<'a>, automata: Automata, mu
     let mut accumulated_time = 0.0;
     let mut current = time::Instant::now();
 
-    // Allow the cell states to be passed between threads
-    let cell_states = config.states.to_vec();
+    let mut automata_thread: Option<thread::JoinHandle<_>> = None;
 
     // The game loop itself
     event_loop.run(move |event, _, control_flow| {
         accumulated_time += current.elapsed().as_secs_f32();
         current = time::Instant::now();
-        if accumulated_time >= fps { 
-            let mut threads = Vec::new();
-            for c in 0..config.thread_count {
-                let length = automata.lock().unwrap().cells.len();
-                let start = length / config.thread_count * c;
-                let end = length / config.thread_count * (c + 1);
-
-                let automata_ref = sync::Arc::clone(&automata);
-                threads.push(thread::spawn(move || {
-                    let mut updated_states: Vec<(usize, u8)> = Vec::new();
-                    for i in start..end {
-                        let state = state_function(
-                            &automata_ref.lock().unwrap(),
-                            {
-                                let y = i / (size.x_len * size.z_len);
-                                let j = i - y * size.x_len * size.z_len;
-                                let z = j / size.x_len;
-                                let x = j % size.x_len;
-
-                                [x, y, z].into()
-                            }
-                        );
-
-                        if state != automata_ref.lock().unwrap().cells[i] {
-                            updated_states.push((i, state));
-                        }
-                    }
-
-                    updated_states
-                } ));
-            }
-
-            // Assemble a vec of all changed cell states
-            for handle in threads.drain(0..) {
-                // Write the changed cell states
-                for (index, state) in handle.join().unwrap().drain(0..) {
-                    automata.lock().unwrap().cells[index] = state;
+        
+        if let Some(handle) = &automata_thread {
+            if handle.is_finished() && accumulated_time >= fps {
+                let handle: JoinHandle<Vec<(usize, u8)>> = automata_thread.take().unwrap();
+                for (index, cell_state) in handle.join().unwrap().drain(0..) {
+                    automata.lock().unwrap().cells[index] = cell_state;
                 }
-            }
 
-            // Truncate the mesh to retain ONLY light sources
-            state.mesh.truncate(config.lighting.light_count());
+                // Truncate the mesh to retain ONLY light sources
+                state.mesh.truncate(config.lighting.light_count());
 
-            // Update the mesh to account for changed cell states
-            let automata_temp = automata.lock().unwrap();
-            for point in automata_temp.iter() {
-                let current_state = automata_temp[point];
-                let point = [
-                    point.x as isize,
-                    point.y as isize,
-                    point.z as isize
-                ].into();
-                
-                // Find the appropriate state, and draw the right-colored cell
-                'builder: for (cell_state, color) in cell_states.iter().cloned() {
-                    if cell_state == current_state {
+                // Update the mesh to account for changed cell states
+                let automata_temp = automata.lock().unwrap();
+                for point in automata_temp.iter() {
+                    let current_state = automata_temp[point];
+                    let point = [
+                        point.x as isize,
+                        point.y as isize,
+                        point.z as isize
+                    ].into();
+                    
+                    // Find the appropriate state, and draw the right-colored cell
+                    if let Some(color) = config.states.get(&current_state) {
                         state.mesh.push(Box::new(objects::Cube::new(
                             point,
-                            color
-                        )));    
-        
-                        break 'builder;
+                            *color
+                        )));   
                     }
                 }
+
+                accumulated_time -= fps;
             }
 
-            // Update loop clock
-            accumulated_time -= fps;
-        }
+        } else if accumulated_time >= fps {
+            let automata_ref = sync::Arc::clone(&automata);
+            automata_thread = Some(thread::spawn(move || tick(
+                config.thread_count, 
+                automata_ref, 
+                state_function
+            )));
+        }            
 
         match event {
             event::Event::RedrawRequested(w_id) if w_id == window.id() => {
+                let RTIME = std::time::Instant::now();
                 state.update();
+                dbg!(RTIME.elapsed());
                 match state.render() {
                     Ok(..) => {  },
                     Err(wgpu::SurfaceError::Lost) => state.resize(state.size),
@@ -268,4 +241,51 @@ async fn run_automata<'a, F: 'static>(config: Config<'a>, automata: Automata, mu
             _ => {  }
         }
     });
+}
+
+fn tick<F: 'static>(thread_count: usize, automata: sync::Arc<sync::Mutex<Automata>>, mut state_function: F) -> Vec<(usize, u8)>
+    where F: FnMut(&Automata, Point3<usize>) -> u8 + Send + Sync + Copy {
+
+    let size = automata.lock().unwrap().size;
+
+    let mut children = Vec::new();
+    for c in 0..thread_count {
+        let length = automata.lock().unwrap().cells.len();
+
+        let start = length / thread_count * c;
+        let end = length / thread_count * (c + 1);
+
+        let automata_ref = sync::Arc::clone(&automata);
+        children.push(thread::spawn(move || {
+            let mut updated_states: Vec<(usize, u8)> = Vec::new();
+            for i in start..end {
+                let state = state_function(
+                    &automata_ref.lock().unwrap(),
+                    {
+                        let y = i / (size.x_len * size.z_len);
+                        let j = i - y * size.x_len * size.z_len;
+                        let z = j / size.x_len;
+                        let x = j % size.x_len;
+
+                        [x, y, z].into()
+                    }
+                );
+
+                if state != automata_ref.lock().unwrap().cells[i] {
+                    updated_states.push((i, state));
+                }
+            }
+
+            updated_states
+        } ));
+    }
+
+    // Assemble a vec of all changed cell states
+    let mut updated_states = Vec::new();
+    for handle in children.drain(0..) {
+        // Write the changed cell states
+        updated_states.append(&mut handle.join().unwrap());
+    }
+
+    updated_states
 }

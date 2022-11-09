@@ -33,7 +33,7 @@ pub(crate) struct State {
 }
 
 impl State {
-    pub async fn new<'a>(window: &window::Window, config: &Config<'a>) -> Self {
+    pub async fn new(window: &window::Window, config: &Config) -> Self {
         let size = window.inner_size();
 
         let instance = wgpu::Instance::new(wgpu::Backends::all());
@@ -317,8 +317,8 @@ impl State {
 
             let mut offset_indices = data.indices
                 .iter()
-                .map(|i| *i + vertices.len() as u16)
-                .collect::<Vec<u16>>();
+                .map(|i| *i + vertices.len() as u32)
+                .collect::<Vec<u32>>();
 
             indices.append(&mut offset_indices);
             vertices.append(&mut data.vertices);
@@ -426,7 +426,7 @@ impl State {
                 self.vertex_buffer.slice(..));
             render_pass.set_index_buffer(
                 self.index_buffer.slice(..), 
-                wgpu::IndexFormat::Uint16);
+                wgpu::IndexFormat::Uint32);
             render_pass.draw_indexed(0..self.index_count, 0, 0..1);
         }
     

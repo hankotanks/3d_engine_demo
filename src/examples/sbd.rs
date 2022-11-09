@@ -1,4 +1,4 @@
-use std::ops::Range;
+use std::{ops::Range, collections::HashMap};
 
 use cgmath::{
     Vector3,
@@ -21,14 +21,14 @@ const HIGH_COLOR: Vector3<f32> = Vector3::new(1.0, 0.0, 0.0);
 pub fn survive_birth_decay(size: Size, s: Range<usize>, b: Range<usize>, d: u8) {
     let config = Config {
         fps: 30,
-        thread_count: 4,
-        lighting: Lighting::VonNeumann,
-        states: &{
-            let mut states: Vec<(u8, [f32; 3])> = Vec::new();
+        thread_count: 8,
+        lighting: Lighting::Corners,
+        states: {
+            let mut states = HashMap::new();
             for i in 1..d {
                 let fraction = i as f32 / (d - 1) as f32;
                 let color = LOW_COLOR.lerp(HIGH_COLOR, fraction);
-                states.push((i, [color.x, color.y, color.z]));
+                states.insert(i, [color.x, color.y, color.z]);
             }
 
             states
@@ -51,7 +51,7 @@ pub fn survive_birth_decay(size: Size, s: Range<usize>, b: Range<usize>, d: u8) 
 
         let current = ca[i];
         match current {
-            1 =>  if (ss..se).contains(&neighbors) { 1 } else { 0 },
+            1 =>  (ss..se).contains(&neighbors) as u8,
             0 =>  if (bs..be).contains(&neighbors) { d - 1 } else { 0 },
             state => state - 1
         }

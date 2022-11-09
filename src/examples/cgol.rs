@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use block_engine_wgpu::{
     Config, 
     camera::birds_eye_camera, 
@@ -12,9 +14,13 @@ use rand::Rng;
 pub fn game_of_life(size: automata::Size) {
     let config = Config {
         fps: 20,
-        thread_count: 4,
-        lighting: Lighting::Bottom,
-        states: &[(1, [1.0; 3])],
+        thread_count: 15,
+        lighting: Lighting::Corners,
+        states: {
+            let mut states = HashMap::new();
+            states.insert(1, [1.0; 3]);
+            states
+        },
         camera_config: birds_eye_camera(size)
     };
 
