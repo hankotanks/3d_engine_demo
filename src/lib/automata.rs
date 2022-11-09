@@ -78,22 +78,22 @@ impl Automata {
         AutomataIterator { size: self.size, index: 0 }
     }
 
-    pub fn moore_neighborhood(&self, index: Point3<i16>) -> Neighborhood {
+    pub fn moore_neighborhood(&self, index: Point3<i16>) -> Neighbors {
         let mut neighbor_count = 0;
-        let mut neighbors = Neighborhood { states: [0u8; 26], len: 26 };
+        let mut neighbors = Neighbors { states: [0u8; 26], len: 26 };
         [-1i16, 0, 1].iter().for_each(|&x| [-1i16, 0, 1].iter().for_each(|&y| [-1i16, 0, 1].iter().for_each(|&z| {
             if [x, y, z] != [0; 3] { 
-                neighbors.states[neighbor_count] = self[[x + index.x, y + index.y, z + index.z].into()];
+                let point = [x + index.x, y + index.y, z + index.z].into();
+                neighbors.states[neighbor_count] = self[point];
                 neighbor_count += 1;
             };
-            
         } )));
 
         neighbors
     }
 
-    pub fn von_neumann_neighborhood(&self, index: Point3<i16>) -> Neighborhood {
-        let mut neighbors = Neighborhood { states: [0u8; 26], len: 6 };
+    pub fn von_neumann_neighborhood(&self, index: Point3<i16>) -> Neighbors {
+        let mut neighbors = Neighbors { states: [0u8; 26], len: 6 };
         [[-1, 0, 0], [1, 0, 0], [0, -1, 0], [0, 1, 0], [0, 0, -1], [0, 0, 1]]
             .iter()
             .enumerate()
@@ -137,12 +137,13 @@ impl Iterator for AutomataIterator {
     }
 }
 
-pub struct Neighborhood {
+#[derive(Clone, Copy)]
+pub struct Neighbors {
     states: [u8; 26],
     len: usize
 }
 
-impl Neighborhood {
+impl Neighbors {
     pub fn living(&self) -> usize {
         self.states[0..self.len].iter().fold(0, |c, &s| c + (s != 0) as usize)
     }

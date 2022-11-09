@@ -6,7 +6,7 @@ mod objects;
 use objects::MeshObject;
 
 pub mod automata;
-use automata::{Automata, Neighborhood};
+use automata::{Automata, Neighbors};
 
 mod vertex;
 pub(crate) use vertex::Vertex;
@@ -14,7 +14,8 @@ pub(crate) use vertex::Vertex;
 use std::{
     time, 
     sync,
-    thread::{self, JoinHandle}, collections::HashMap
+    thread, 
+    collections::HashMap
 };
 
 use winit::{
@@ -32,6 +33,7 @@ pub struct Config {
     pub thread_count: usize,
     pub lighting: Lighting,
     pub states: HashMap<u8, [f32; 3]>,
+    pub neighborhood: Neighborhood,
     pub camera_config: camera::CameraConfig
 }
 
@@ -40,7 +42,7 @@ pub enum Lighting {
     Bottom,
     Center,
     Corners,
-    VonNeumann
+    Faces
 }
 
 impl Lighting {
@@ -49,13 +51,19 @@ impl Lighting {
             Lighting::Bottom => 1,
             Lighting::Center => 1,
             Lighting::Corners => 8,
-            Lighting::VonNeumann => 6,
+            Lighting::Faces => 6,
         }
     }
 }
 
+#[derive(Clone, Copy)]
+pub enum Neighborhood {
+    Moore,
+    VonNeumann
+}
+
 pub fn run<F: 'static>(config: Config, automata: Automata, state_function: F) 
-    where F: FnMut(Neighborhood, u8) -> u8 + Send + Sync + Copy {
+    where F: FnMut(Neighbors, u8) -> u8 + Send + Sync + Copy {
     pollster::block_on(run_automata(
         config,
         automata,
@@ -64,7 +72,7 @@ pub fn run<F: 'static>(config: Config, automata: Automata, state_function: F)
 }
 
 async fn run_automata<F: 'static>(config: Config, mut automata: Automata, state_function: F) 
-    where F: FnMut(Neighborhood, u8) -> u8 + Send + Sync + Copy {
+    where F: FnMut(Neighbors, u8) -> u8 + Send + Sync + Copy {
 
     // Initialize the Window and EventLoop
     let event_loop = event_loop::EventLoop::new();
@@ -93,7 +101,7 @@ async fn run_automata<F: 'static>(config: Config, mut automata: Automata, state_
                 [width + 1, -2, depth + 1]
             ],
             Lighting::Center => vec![[width / 2, height / 2, depth / 2]],
-            Lighting::VonNeumann => vec![
+            Lighting::Faces => vec![
                 [width / 2, -2, depth / 2],
                 [width / 2, height + 1, depth / 2],
                 [-2, height / 2, depth / 2],
@@ -134,7 +142,7 @@ async fn run_automata<F: 'static>(config: Config, mut automata: Automata, state_
         
         if let Some(handle) = &automata_thread {
             if handle.is_finished() && accumulated_time >= fps {
-                let handle: JoinHandle<Vec<(Point3<i16>, u8)>> = automata_thread.take().unwrap();
+                let handle = automata_thread.take().unwrap();
                 for (index, cell_state) in handle.join().unwrap().drain(0..) {
                     automata[index] = cell_state;
                 }
@@ -162,6 +170,7 @@ async fn run_automata<F: 'static>(config: Config, mut automata: Automata, state_
             let automata_ref = sync::Arc::new(automata.clone());
             automata_thread = Some(thread::spawn(move || tick(
                 config.thread_count, 
+                config.neighborhood,
                 automata_ref, 
                 state_function
             )));
@@ -241,16 +250,22 @@ async fn run_automata<F: 'static>(config: Config, mut automata: Automata, state_
     });
 }
 
-fn tick<F: 'static>(thread_count: usize, automata: sync::Arc<Automata>, mut state_function: F) -> Vec<(Point3<i16>, u8)>
-    where F: FnMut(Neighborhood, u8) -> u8 + Send + Sync + Copy {
+fn tick<F: 'static>(thread_count: usize, neighborhood: Neighborhood, automata: sync::Arc<Automata>, mut state_function: F) -> Vec<(Point3<i16>, u8)>
+    where F: FnMut(Neighbors, u8) -> u8 + Send + Sync + Copy {
     /*  */
     let ATIME = std::time::Instant::now();
     /*  */
 
     let updated_states = automata.iter().filter_map(|point| {
-        let cell_state = state_function(automata.von_neumann_neighborhood(point), automata[point]);
+        let neighbors = match neighborhood {
+            Neighborhood::Moore => automata.moore_neighborhood(point),
+            Neighborhood::VonNeumann => automata.von_neumann_neighborhood(point)
+        };
+        
+        let old_cell_state = automata[point];
+        let cell_state = state_function(neighbors, old_cell_state);
 
-        if cell_state != automata[point] {
+        if cell_state != old_cell_state {
             Some((point, cell_state))
         } else {
             None

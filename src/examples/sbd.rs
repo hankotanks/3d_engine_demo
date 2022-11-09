@@ -21,8 +21,9 @@ const HIGH_COLOR: Vector3<f32> = Vector3::new(1.0, 0.0, 0.0);
 pub fn survive_birth_decay(size: Size, s: Range<usize>, b: Range<usize>, d: u8) {
     let config = Config {
         fps: 30,
-        thread_count: 8,
+        thread_count: 2,
         lighting: Lighting::Corners,
+        neighborhood: block_engine_wgpu::Neighborhood::VonNeumann,
         states: {
             let mut states = HashMap::new();
             for i in 1..d {

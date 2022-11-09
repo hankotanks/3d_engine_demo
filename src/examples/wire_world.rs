@@ -49,6 +49,7 @@ pub fn ww_run(file_name: &str) -> Result<(), io::Error> {
         fps: 10,
         thread_count: 4,
         lighting: Lighting::Corners,
+        neighborhood: block_engine_wgpu::Neighborhood::Moore,
         states: {
             let mut states = HashMap::new();
             states.insert(1, [1.0, 0.2, 0.0]);

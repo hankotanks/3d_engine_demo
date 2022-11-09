@@ -16,6 +16,7 @@ pub fn game_of_life(size: automata::Size) {
         fps: 20,
         thread_count: 15,
         lighting: Lighting::Corners,
+        neighborhood: block_engine_wgpu::Neighborhood::Moore,
         states: {
             let mut states = HashMap::new();
             states.insert(1, [1.0; 3]);
