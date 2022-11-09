@@ -1,7 +1,7 @@
-use std::ops::{ 
+use std::{ops::{ 
     Index, 
     IndexMut 
-};
+}, collections::HashMap};
 
 use cgmath::Point3;
 
@@ -23,11 +23,11 @@ impl From<[usize; 3]> for Size {
 }
 
 impl Size {
-    pub(crate) const fn center(&self) -> Point3<isize> {
+    pub(crate) const fn center(&self) -> Point3<i8> {
         Point3::new(
-            self.x_len as isize / 2, 
-            self.y_len as isize / 2, 
-            self.z_len as isize / 2
+            self.x_len as i8 / 2, 
+            self.y_len as i8 / 2, 
+            self.z_len as i8 / 2
         )
     }
 
@@ -37,101 +37,78 @@ impl Size {
 }
 
 pub struct Automata {
-    pub(crate) cells: Vec<u8>,
+    pub(crate) cells: HashMap<Point3<i8>, u8>,
     pub(crate) size: Size
 }
 
-impl Index<Point3<usize>> for Automata {
+impl Index<Point3<i8>> for Automata {
     type Output = u8;
 
-    fn index(&self, index: Point3<usize>) -> &Self::Output {
-        let cell_index = {
-            index.x + 
-            index.y * self.size.x_len * self.size.z_len + 
-            index.z * self.size.x_len 
-        };
+    fn index(&self, mut index: Point3<i8>) -> &Self::Output {
+        index = wrap(self.size, index);
 
-        &self.cells[cell_index]
+        match self.cells.get(&index) {
+            Some(cell_state) => cell_state,
+            None => &0u8
+        }
     }
 }
 
-impl IndexMut<Point3<usize>> for Automata {
-    fn index_mut(&mut self, index: Point3<usize>) -> &mut Self::Output {
-        let cell_index = {
-            index.x + 
-            index.y * self.size.x_len * self.size.z_len + 
-            index.z * self.size.x_len 
-        };
+impl IndexMut<Point3<i8>> for Automata {
+    fn index_mut(&mut self, index: Point3<i8>) -> &mut Self::Output {
+        index = wrap(self.size, index);
 
-        &mut self.cells[cell_index]
+        match self.cells.get_mut(&index) {
+            Some(cell_state) => cell_state,
+            None => {
+                self.cells.insert(index, 0u8);
+                self.cells.get_mut(&index).unwrap()
+            }
+        }
     }
 }
 
 impl Automata {
     pub fn new(size: Size) -> Self {
-        let cells = vec![0; size.cell_count()];
-
-        Self { cells, size }
+        Self { cells: HashMap::new(), size }
     }
 
     pub fn iter(&self) -> AutomataIterator {
         AutomataIterator { size: self.size, index: 0 }
     }
 
-    pub fn moore_neighborhood(&self, index: Point3<usize>) -> Vec<Point3<usize>> {
-        let mut neighbors = Vec::new();
-        for x in -1..=1isize {
-            let x = index.x as isize + x;
-            for y in -1..=1isize {
-                let y  = index.y as isize + y;
-                for z in -1..=1isize {
-                    let z = index.z as isize + z;
-
-                    let target = wrap(self.size, [x, y, z].into());
-                    if target != index { neighbors.push(target); }
-                }
-            }
-        }
+    pub fn moore_neighborhood(&self, index: Point3<i8>) -> [u8; 26] {
+        let mut neighbor_count = 0;
+        let mut neighbors = [0; 26];
+        [-1i8, 0, 1].iter().for_each(|&x| [-1i8, 0, 1].iter().for_each(|&y| [-1i8, 0, 1].iter().for_each(|&z| {
+            if [x, y, z] != [0; 3] { neighbors[neighbor_count] = self[[x + index.x, y + index.y, z + index.z].into()] };
+            neighbor_count += 1;
+        } )));
 
         neighbors
     }
 
-    pub fn von_neumann_neighborhood(&self, index: Point3<usize>) -> Vec<Point3<usize>> {
-        let offsets: [[isize; 3]; 6] = [
-            [-1, 0, 0],
-            [1, 0, 0],
-            [0, -1, 0],
-            [0, 1, 0],
-            [0, 0, -1],
-            [0, 0, 1]
-        ];
-
-        let mut neighbors = Vec::new();
-        for offset in offsets.into_iter() {
-            neighbors.push(wrap(
-                self.size, 
-                Point3::new(
-                    offset[0] + index.x as isize,
-                    offset[1] + index.y as isize,
-                    offset[2] + index.z as isize
-                )
-            ));
-        }
+    pub fn von_neumann_neighborhood(&self, index: Point3<i8>) -> [u8; 6] {
+        let mut neighbors = [0; 6];
+        [[-1, 0, 0], [1, 0, 0], [0, -1, 0], [0, 1, 0], [0, 0, -1], [0, 0, 1]]
+            .iter()
+            .enumerate()
+            .map(|(i, j)| neighbors[i] = self[[j[0] + index.x, j[1] + index.y, j[2] + index.z].into()]);
 
         neighbors 
     }
 }
 
-fn wrap(size: Size, coord: Point3<isize>) -> Point3<usize> {
-    let mut x = coord.x % size.x_len as isize;
-    let mut y = coord.y % size.y_len as isize;
-    let mut z = coord.z % size.z_len as isize;
+fn wrap(size: Size, coord: Point3<i8>) -> Point3<i8> {
+    let mut x = coord.x % size.x_len as i8;
+    let mut y = coord.y % size.y_len as i8;
+    let mut z = coord.z % size.z_len as i8;
 
-    if x < 0 { x += size.x_len as isize; }
-    if y < 0 { y += size.y_len as isize; }
-    if z < 0 { z += size.z_len as isize; }
+    if x < 0 { x += size.x_len as i8; }
+    if y < 0 { y += size.y_len as i8; }
+    if z < 0 { z += size.z_len as i8; }
     
-    [ x as usize, y as usize, z as usize ].into()
+    [x, y, z].into()
 }
 
 pub struct AutomataIterator {
@@ -152,8 +129,6 @@ impl Iterator for AutomataIterator {
 
         self.index += 1;
 
-        Some(
-            [x, y, z].into()
-        )
+        Some([x, y, z].into())
     }
 }
