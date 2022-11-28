@@ -23,9 +23,13 @@ pub struct Config {
     pub fps: usize
 }
 
-pub async fn run<F: 'static, G: 'static>(config: Config, update: F, mut process_events: G) where 
-    F: Fn(&mut Vec<Box<dyn MeshObject>>), 
-    G: FnMut(&event::DeviceEvent, &mut Vec<Box<dyn MeshObject>>, &mut camera::Camera) -> bool {
+pub async fn run<F: 'static, G: 'static>(
+    config: Config, 
+    mut update: F, 
+    mut process_events: G
+) where 
+    F: FnMut(&mut Vec<Box<dyn MeshObject>>), 
+    G: FnMut(&event::DeviceEvent, &mut camera::Camera, &mut Vec<Box<dyn MeshObject>>) -> bool {
 
     // Initialize the Window and EventLoop
     let event_loop = event_loop::EventLoop::new();
@@ -98,7 +102,7 @@ pub async fn run<F: 'static, G: 'static>(config: Config, update: F, mut process_
             // The user can capture events from the window...
             // ...which can affect both the mesh and the camera
             event::Event::DeviceEvent { ref event, .. } => {
-                if process_events(event, &mut state.mesh, &mut state.camera) {
+                if process_events(event, &mut state.camera, &mut state.mesh) {
                     window.request_redraw();
                 }
             }

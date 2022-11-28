@@ -2,7 +2,7 @@ use cgmath::{
     Point3,
     Matrix4, 
     SquareMatrix, 
-    EuclideanSpace
+    EuclideanSpace, Vector3
 };
 
 pub struct Camera {
@@ -85,9 +85,7 @@ impl Camera {
         self.update();
     }
 
-    pub fn displace_target(&mut self, displacement: Point3<f32>) {
-        let displacement = displacement.to_vec();
-
+    pub fn displace_target(&mut self, displacement: Vector3<f32>) {
         self.set_target(self.target + displacement);
         self.update();
     }

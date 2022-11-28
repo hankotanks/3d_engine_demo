@@ -327,15 +327,7 @@ impl State {
         self.index_count = indices.len() as u32;
 
         // Update light sources
-        self.lighting.light_uniforms[0].color = [1.0; 4];
-        self.lighting.light_uniforms[0].position = [
-            self.camera.target.x,
-            1.0,
-            self.camera.target.z,
-            1.0
-        ];
-
-        let mut light_count = 1;
+        let mut light_count = 0;
         for object in self.mesh.iter() {
             if let Some(light) = object.light() {
                 self.lighting.light_uniforms[light_count].color = light;
