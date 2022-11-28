@@ -1,8 +1,8 @@
-mod cube;
-pub(crate) use cube::Cube;
+pub mod cube;
+pub use cube::Cube;
 
-mod gap;
-pub(crate) use gap::Gap;
+pub mod gap;
+pub use gap::Gap;
 
 use crate::Vertex;
 

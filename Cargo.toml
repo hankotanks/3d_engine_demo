@@ -12,6 +12,7 @@ pollster = "0.2"
 rand = "0.8.5"
 itertools = "*"
 rayon = "1.5.3"
+noise = "0.8"
 
 [[bin]]
 name = "block_engine_wgpu"

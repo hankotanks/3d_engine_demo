@@ -6,7 +6,7 @@ use super::{
 
 use cgmath::Point3;
 
-pub(crate) struct Gap {
+pub struct Gap {
     pub(crate) position: Point3<i16>,
     pub(crate) light: Option<[f32; 4]>
 }

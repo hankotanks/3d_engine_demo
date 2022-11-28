@@ -1,5 +1,3 @@
-use cgmath::Point3;
-
 use super::{
     MeshObject, 
     MeshObjectData, 
@@ -8,7 +6,9 @@ use super::{
 
 use crate::Vertex;
 
-pub(crate) struct Cube {
+use cgmath::Point3;
+
+pub struct Cube {
     pub(crate) position: Point3<i16>,
     pub(crate) hw: f32,
     pub(crate) color: [f32; 3],

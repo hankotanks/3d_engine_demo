@@ -6,22 +6,21 @@ use crate::{
     camera,
     Vertex,
     objects::MeshObject,
-    light, 
-    Config
+    light
 };
 
 pub(crate) struct State {
+    pub mesh: Vec<Box<dyn MeshObject>>,
+
     pub(crate) size: winit::dpi::PhysicalSize<u32>,
     pub(crate) surface: wgpu::Surface,
     pub(crate) device: wgpu::Device,
     pub(crate) queue: wgpu::Queue,
     pub(crate) surface_config: wgpu::SurfaceConfiguration,
-    pub(crate) mesh: Vec<Box<dyn MeshObject>>,
     pub(crate) vertex_buffer: wgpu::Buffer,
     pub(crate) index_buffer: wgpu::Buffer,
     pub(crate) index_count: u32,
     pub(crate) camera: camera::Camera,
-    pub(crate) camera_controller: camera::CameraController,
     pub(crate) camera_uniform: camera::CameraUniform,
     pub(crate) camera_buffer: wgpu::Buffer,
     pub(crate) camera_bind_group: wgpu::BindGroup,
@@ -33,7 +32,9 @@ pub(crate) struct State {
 }
 
 impl State {
-    pub async fn new(window: &window::Window, config: &Config) -> Self {
+    pub async fn new(window: &window::Window) -> Self {
+        let mesh = Vec::new();
+
         let size = window.inner_size();
 
         let instance = wgpu::Instance::new(wgpu::Backends::all());
@@ -75,8 +76,6 @@ impl State {
 
         surface.configure(&device, &surface_config);
 
-        let mesh = Vec::new();
-
         let vertex_buffer = device.create_buffer_init(
             &wgpu::util::BufferInitDescriptor {
                 label: None,
@@ -95,21 +94,7 @@ impl State {
 
         let index_count = 0u32;
 
-        let camera = camera::Camera::new(config.camera_config);
-
-        let camera_controller = camera::CameraController::new(
-            if let Some(zoom_speed) = config.camera_config.zoom_speed {
-                zoom_speed
-            } else {
-                camera::CameraConfig::default().zoom_speed.unwrap()
-            }, 
-    
-            if let Some(rotate_speed) = config.camera_config.rotate_speed {
-                rotate_speed
-            } else {
-                camera::CameraConfig::default().rotate_speed.unwrap()
-            }, 
-        );
+        let camera = camera::Camera::default();
 
         let mut camera_uniform = camera::CameraUniform::new();
         camera_uniform.update_projection(&camera);
@@ -272,17 +257,16 @@ impl State {
         );
 
         Self {
+            mesh,
             size,
             surface,
             device,
             queue,
             surface_config,
-            mesh,
             vertex_buffer,
             index_buffer,
             index_count,
             camera,
-            camera_controller,
             camera_uniform,
             camera_buffer,
             camera_bind_group,
@@ -294,7 +278,7 @@ impl State {
         }
     }
 
-    pub fn resize(&mut self, new_size: winit::dpi::PhysicalSize<u32>) {
+    pub(crate) fn resize(&mut self, new_size: winit::dpi::PhysicalSize<u32>) {
         if new_size.width > 0 && new_size.height > 0 {
             self.size = new_size;
             self.surface_config.width = new_size.width;
@@ -309,7 +293,7 @@ impl State {
         }
     }
 
-    pub fn update(&mut self) {
+    pub(crate) fn update(&mut self) {
         let mut vertices = Vec::new();
         let mut indices = Vec::new();
         for object in self.mesh.iter() {
@@ -343,7 +327,15 @@ impl State {
         self.index_count = indices.len() as u32;
 
         // Update light sources
-        let mut light_count = 0;
+        self.lighting.light_uniforms[0].color = [1.0; 4];
+        self.lighting.light_uniforms[0].position = [
+            self.camera.target.x,
+            1.0,
+            self.camera.target.z,
+            1.0
+        ];
+
+        let mut light_count = 1;
         for object in self.mesh.iter() {
             if let Some(light) = object.light() {
                 self.lighting.light_uniforms[light_count].color = light;
@@ -372,7 +364,7 @@ impl State {
         );
     }
 
-    pub fn render(&mut self) -> Result<(), wgpu::SurfaceError> {
+    pub(crate) fn render(&mut self) -> Result<(), wgpu::SurfaceError> {
         let output = self.surface.get_current_texture()?;
         let view = output.texture.create_view(
             &wgpu::TextureViewDescriptor::default()
@@ -440,7 +432,7 @@ impl State {
     }
 }
 
-pub fn create_depth_texture(
+pub(crate) fn create_depth_texture(
     device: &wgpu::Device, 
     config: &wgpu::SurfaceConfiguration
 ) -> wgpu::TextureView {

@@ -1,6 +1,3 @@
-mod controller;
-pub(crate) use controller::CameraController;
-
 use cgmath::{
     Point3,
     Matrix4, 
@@ -8,63 +5,7 @@ use cgmath::{
     EuclideanSpace
 };
 
-use crate::automata;
-
-#[derive(Clone, Copy)]
-pub struct CameraConfig {
-    pub target: Option<Point3<i16>>,
-    pub distance: Option<f32>,
-    pub pitch: Option<f32>,
-    pub yaw: Option<f32>,
-    pub aspect: Option<f32>,
-    pub zoom_speed: Option<f32>,
-    pub rotate_speed: Option<f32>
-}
-
-impl Default for CameraConfig {
-    fn default() -> Self {
-        Self { 
-            target: Some([0; 3].into()), 
-            distance: Some(2.0), 
-            pitch: Some(1.5), 
-            yaw: Some(1.25),
-            aspect: Some(1.0), 
-            zoom_speed: Some(0.6), 
-            rotate_speed: Some(0.025)
-        }
-    }
-}
-
-pub const fn birds_eye_camera(size: automata::Size) -> CameraConfig {
-    let center = size.center();
-    let center = Point3::new(center.x as i16, 1, center.z as i16);
-
-    CameraConfig { 
-        target: Some(center),
-        distance: Some((size.x_len + size.z_len) as f32),        
-        pitch: None,
-        yaw: Some(0.0),
-        aspect: None, 
-        zoom_speed: None,
-        rotate_speed: Some(0.0)
-    }
-}
-
-pub const fn free_camera(size: automata::Size) -> CameraConfig {
-    let center = size.center();
-
-    CameraConfig {
-        target: Some(center),
-        distance: Some(((center.x + center.y + center.z) / 3) as f32),
-        pitch: None,
-        yaw: None,
-        aspect: None,
-        zoom_speed: None,
-        rotate_speed: None
-    }
-}
-
-pub(crate) struct Camera {
+pub struct Camera {
     pub(crate) distance: f32,
     pub(crate) eye: Point3<f32>,
     pub(crate) target: Point3<f32>,
@@ -72,6 +13,84 @@ pub(crate) struct Camera {
     pub(crate) yaw: f32,
     pub(crate) aspect: f32,
     pub(crate) bounds: CameraBounds
+}
+
+impl Default for Camera {
+    fn default() -> Self {
+        let mut camera = Self {
+            distance: 2.0,
+            eye: [0.0, 0.0, 0.0].into(),
+            target: [0.0, 0.0, 0.0].into(),
+            pitch: 1.5,
+            yaw: 1.25,
+            aspect: 1.0,
+            bounds: CameraBounds::default()
+        };
+
+        camera.update();
+        camera
+    }
+}
+
+impl Camera {
+    pub(crate) fn update(&mut self) {
+        self.eye = Point3::new(
+            self.distance * self.yaw.sin() * self.pitch.cos(),
+            self.distance * self.pitch.sin(),
+            self.distance * self.yaw.cos() * self.pitch.cos()
+        );
+
+        self.eye += self.target.to_vec();
+    }
+
+    pub fn set_distance(&mut self, distance: f32) {
+        self.distance = distance.clamp(
+            self.bounds.min_distance.unwrap_or(f32::EPSILON),
+            self.bounds.max_distance.unwrap_or(f32::MAX),
+        );
+        self.update();
+    }
+
+    pub fn add_distance(&mut self, delta: f32) {
+        self.set_distance(self.distance + delta);
+    }
+
+    pub fn set_pitch(&mut self, pitch: f32) {
+        self.pitch = pitch.clamp(self.bounds.min_pitch, self.bounds.max_pitch);
+        self.update();
+    }
+
+    pub fn add_pitch(&mut self, delta: f32) {
+        self.set_pitch(self.pitch + delta);
+    }
+
+    pub fn set_yaw(&mut self, yaw: f32) {
+        let mut bounded_yaw = yaw;
+        if let Some(min_yaw) = self.bounds.min_yaw {
+            bounded_yaw = bounded_yaw.clamp(min_yaw, f32::MAX);
+        }
+        if let Some(max_yaw) = self.bounds.max_yaw {
+            bounded_yaw = bounded_yaw.clamp(f32::MIN, max_yaw);
+        }
+        self.yaw = bounded_yaw;
+        self.update();
+    }
+
+    pub fn add_yaw(&mut self, delta: f32) {
+        self.set_yaw(self.yaw + delta);
+    }
+
+    pub fn set_target(&mut self, target: Point3<f32>) {
+        self.target = target;
+        self.update();
+    }
+
+    pub fn displace_target(&mut self, displacement: Point3<f32>) {
+        let displacement = displacement.to_vec();
+
+        self.set_target(self.target + displacement);
+        self.update();
+    }
 }
 
 impl Camera {
@@ -104,120 +123,6 @@ impl Camera {
     }
 }
 
-impl Default for Camera {
-    fn default() -> Self {
-        let mut camera = Self {
-            distance: 2.0,
-            eye: [0.0, 0.0, 0.0].into(),
-            target: [0.0, 0.0, 0.0].into(),
-            pitch: 1.5,
-            yaw: 1.25,
-            aspect: 1.0,
-            bounds: CameraBounds::default()
-        };
-
-        camera.update();
-        camera
-    }
-}
-
-impl Camera {
-    pub(crate) fn new(camera_config: CameraConfig) -> Self {
-        let default_camera_config = CameraConfig::default();
-
-        let mut camera = Self {
-            distance: {
-                if let Some(distance) = camera_config.distance {
-                    distance
-                } else {
-                    default_camera_config.distance.unwrap()
-                }
-            },
-            eye: [0.0; 3].into(),
-            target: {
-                let mut target = default_camera_config.target.unwrap();
-                if let Some(real_target) = camera_config.target {
-                    target = real_target;
-                }
-
-                [target.x as f32, target.y as f32, target.z as f32].into()
-            },
-            pitch: {
-                if let Some(pitch) = camera_config.pitch {
-                    pitch
-                } else {
-                    default_camera_config.pitch.unwrap()
-                }
-            },
-            yaw: {
-                if let Some(yaw) = camera_config.yaw {
-                    yaw
-                } else {
-                    default_camera_config.yaw.unwrap()
-                }
-            },
-            aspect: {
-                if let Some(aspect) = camera_config.aspect {
-                    aspect
-                } else {
-                    default_camera_config.aspect.unwrap()
-                }
-            },
-            bounds: CameraBounds::default(),
-        };
-
-        camera.update();
-        camera
-    }
-
-    pub(crate) fn update(&mut self) {
-        self.eye = Point3::new(
-            self.distance * self.yaw.sin() * self.pitch.cos(),
-            self.distance * self.pitch.sin(),
-            self.distance * self.yaw.cos() * self.pitch.cos()
-        );
-
-        self.eye += self.target.to_vec();
-    }
-
-    pub(crate) fn set_distance(&mut self, distance: f32) {
-        self.distance = distance.clamp(
-            self.bounds.min_distance.unwrap_or(f32::EPSILON),
-            self.bounds.max_distance.unwrap_or(f32::MAX),
-        );
-        self.update();
-    }
-
-    pub(crate) fn add_distance(&mut self, delta: f32) {
-        self.set_distance(self.distance + delta);
-    }
-
-    pub(crate) fn set_pitch(&mut self, pitch: f32) {
-        self.pitch = pitch.clamp(self.bounds.min_pitch, self.bounds.max_pitch);
-        self.update();
-    }
-
-    pub(crate) fn add_pitch(&mut self, delta: f32) {
-        self.set_pitch(self.pitch + delta);
-    }
-
-    pub(crate) fn set_yaw(&mut self, yaw: f32) {
-        let mut bounded_yaw = yaw;
-        if let Some(min_yaw) = self.bounds.min_yaw {
-            bounded_yaw = bounded_yaw.clamp(min_yaw, f32::MAX);
-        }
-        if let Some(max_yaw) = self.bounds.max_yaw {
-            bounded_yaw = bounded_yaw.clamp(f32::MIN, max_yaw);
-        }
-        self.yaw = bounded_yaw;
-        self.update();
-    }
-
-    pub(crate) fn add_yaw(&mut self, delta: f32) {
-        self.set_yaw(self.yaw + delta);
-    }
-}
-
 #[cfg_attr(target_arch = "wasm32", wasm_bindgen)]
 #[derive(Debug, Clone, Copy)]
 pub(crate) struct CameraBounds {
@@ -241,6 +146,44 @@ impl Default for CameraBounds {
         }
     }
 }
+
+pub struct CameraBuilder(Camera);
+
+impl CameraBuilder {
+    pub fn new() -> Self {
+        Self(Camera::default())
+    }
+
+    pub fn distance(mut self, distance: f32) -> Self {
+        self.0.distance = distance;
+        self
+    }
+
+    pub fn target(mut self, target: Point3<f32>) -> Self {
+        self.0.target = target;
+        self
+    }
+
+    pub fn pitch(mut self, pitch: f32) -> Self {
+        self.0.pitch = pitch;
+        self
+    }
+
+    pub fn yaw(mut self, yaw: f32) -> Self {
+        self.0.yaw = yaw;
+        self
+    }
+
+    pub fn aspect(mut self, aspect: f32) -> Self {
+        self.0.aspect = aspect;
+        self
+    }
+
+    pub fn build(mut self) -> Camera {
+        self.0.update();
+        self.0
+    }
+}
     
 #[repr(C)]
 #[derive(Clone, Copy, bytemuck::Pod, bytemuck::Zeroable)]
@@ -262,4 +205,3 @@ impl CameraUniform {
         self.projection = camera.build_view_projection_matrix().into();
     }
 }
-
