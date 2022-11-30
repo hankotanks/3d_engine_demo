@@ -1,4 +1,4 @@
-use cgmath::Point3;
+use cgmath::{Point3, Vector3, Zero};
 
 use crate::drawable::Drawable;
 
@@ -7,11 +7,32 @@ use super::Entity;
 pub struct PlaceholderEntity {
     pub center: Point3<f32>,
     pub color: [f32; 3],
-    pub light: Option<[f32; 4]>
+    pub light: Option<[f32; 4]>,
+
+    pub velocity: Vector3<f32>,
+    pub weight: f32
 }
 
 impl Entity for PlaceholderEntity {
+    fn velocity(&self) -> cgmath::Vector3<f32> {
+        self.velocity
+    }
 
+    fn set_velocity(&mut self, velocity: cgmath::Vector3<f32>) {
+        self.velocity = velocity;
+    }
+
+    fn weight(&self) -> f32 {
+        self.weight
+    }
+
+    fn set_weight(&mut self, weight: f32) {
+        self.weight = weight;
+    }
+
+    fn is_in_motion(&self) -> bool {
+        self.velocity.is_zero()
+    }
 }
 
 impl Drawable for PlaceholderEntity {

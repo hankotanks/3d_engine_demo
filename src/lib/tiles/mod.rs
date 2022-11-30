@@ -61,7 +61,10 @@ impl World {
             let z_min = pos.z - 0.5;
             let z_max = pos.z + 0.5;
 
-            if x_min < center.x && center.x < x_max && y_min < center.y && center.y < y_max && z_min < center.z && center.z < z_max {
+            let xc = x_min < center.x && center.x < x_max;
+            let yc = y_min < center.y && center.y < y_max;
+            let zc = z_min < center.z && center.z < z_max;
+            if xc && yc && zc { 
                 return true;
             }
         }

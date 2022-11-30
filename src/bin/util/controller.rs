@@ -4,12 +4,27 @@ use winit::event;
 
 const ZOOM_SPEED: f32 = 0.6;
 
+pub mod directions {
+    pub const UP: u8 = 1 << 0;
+    pub const DOWN: u8 = 1 << 1;
+    pub const LEFT: u8 = 1 << 2;
+    pub const RIGHT: u8 = 1 << 3;
+}
+
+pub struct PlayerController {
+    pub index: usize,
+    pub direction: u8,
+    pub initial_speed: f32,
+    pub maximum_speed: f32,
+    pub acceleration: f32,
+}
+
 pub fn process_events(
     event: &event::DeviceEvent, 
-    camera: &mut Camera, 
-    world: &mut tiles::World,
+    camera: &mut Camera,
     entities: &mut Vec<Box<dyn entities::Entity>>,
-) -> bool {
+    player_controller: &mut PlayerController
+) {
     match &event {        
         // Zoom
         event::DeviceEvent::MouseWheel { delta, .. } => {
@@ -25,8 +40,6 @@ pub fn process_events(
             };
 
             camera.add_distance(scroll_amount * ZOOM_SPEED);
-
-            true
         }
 
         // Panning
@@ -34,62 +47,53 @@ pub fn process_events(
             state: event::ElementState::Pressed,
             virtual_keycode: Some(event::VirtualKeyCode::Left),
             ..
-        } ) => move_player(camera, world, entities, (-0.2, 0.0, 0.0).into()),
+        } ) => player_controller.direction |= directions::LEFT,
 
         event::DeviceEvent::Key(event::KeyboardInput {
             state: event::ElementState::Pressed,
             virtual_keycode: Some(event::VirtualKeyCode::Right),
             ..
-        } ) => move_player(camera, world, entities, (0.2, 0.0, 0.0).into()),
+        } ) => player_controller.direction |= directions::RIGHT,
 
         event::DeviceEvent::Key(event::KeyboardInput {
             state: event::ElementState::Pressed,
             virtual_keycode: Some(event::VirtualKeyCode::Up),
             ..
-        } ) => move_player(camera, world, entities, (0.0, 0.0, -0.2).into()),
+        } ) => player_controller.direction |= directions::UP,
 
         event::DeviceEvent::Key(event::KeyboardInput {
             state: event::ElementState::Pressed,
             virtual_keycode: Some(event::VirtualKeyCode::Down),
             ..
-        } ) => move_player(camera, world, entities, (0.0, 0.0, 0.2).into()),
+        } ) => player_controller.direction |= directions::DOWN,
 
-        _ => false
+         // Panning
+         event::DeviceEvent::Key(event::KeyboardInput {
+            state: event::ElementState::Released,
+            virtual_keycode: Some(event::VirtualKeyCode::Left),
+            ..
+        } ) => player_controller.direction &= !directions::LEFT,
+
+        event::DeviceEvent::Key(event::KeyboardInput {
+            state: event::ElementState::Released,
+            virtual_keycode: Some(event::VirtualKeyCode::Right),
+            ..
+        } ) => player_controller.direction &= !directions::RIGHT,
+
+        event::DeviceEvent::Key(event::KeyboardInput {
+            state: event::ElementState::Released,
+            virtual_keycode: Some(event::VirtualKeyCode::Up),
+            ..
+        } ) => player_controller.direction &= !directions::UP,
+
+        event::DeviceEvent::Key(event::KeyboardInput {
+            state: event::ElementState::Released,
+            virtual_keycode: Some(event::VirtualKeyCode::Down),
+            ..
+        } ) => player_controller.direction &= !directions::DOWN,
+
+        _ => {  }
     }
-}
-
-fn move_player(
-    camera: &mut Camera, 
-    world: &mut tiles::World,
-    entities: &mut Vec<Box<dyn entities::Entity>>,
-    mut displacement: Vector3<f32>
-) -> bool {
-    let pos = entities[0].center();
-
-    move_to(world, pos, &mut displacement);
-
-    entities[0].set_center(pos + displacement);
-    camera.displace_target(displacement.cast::<f32>().unwrap());
-
-    true
-}
-
-// TODO - Returns the displacement that can be applied without colliding with Tiles
-fn move_to(
-    world: &mut World,
-    pos: Point3<f32>,
-    displacement: &mut Vector3<f32>
-) {
-    let increment: Vector3<f32> = [
-        displacement.x * 0.1,
-        displacement.y * 0.1,
-        displacement.z * 0.1
-    ].into();
-
-    while world.occupied(pos + *displacement) {
-        *displacement -= increment;
-    }
-    //dbg!("after", *displacement);
 }
 
 /*

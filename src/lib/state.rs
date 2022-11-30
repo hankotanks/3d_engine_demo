@@ -1,3 +1,4 @@
+use cgmath::{Vector3, Point3, Zero};
 use winit::window;
 
 use wgpu::util::DeviceExt;
@@ -301,6 +302,31 @@ impl State {
     pub(crate) fn update(&mut self) {
         let mut indices = self.world.indices.clone();
         let mut vertices = self.world.vertices.clone();
+
+        for entity in self.entities.iter_mut() {
+            // subtract the object's weight from it's velocity's y component
+            let mut velocity = entity.velocity() - Vector3::new(0.0, entity.weight(), 0.0);
+            let increment = velocity * 0.1;
+
+            // Find the discrete coordinates of the tile containing the entity's new position (velocity + position)
+            fn get_discrete_point(pt: Point3<f32>) -> Point3<i16> {
+                (pt.x.round() as i16, pt.y.round()as i16, pt.z.round() as i16).into()
+            }
+
+            let mut _collided = false;
+            while self.world.contains(&get_discrete_point(entity.center() + velocity)) && !velocity.is_zero() {
+                _collided = true;
+                velocity -= increment;
+            }
+
+            entity.set_center(entity.center() + velocity);
+
+            // Check if it is filled
+            // If it is, mark a collision.
+            // while there is a collision, continue to scale back the entity's displacement vector, until...
+            // there isn't a collision OR the displacement vector == the 0 vector
+            // set the entity's new position with its previous position plus the displacement vector
+        }
 
         for entity in self.entities.iter() {
             let mut triangles = entity.build_object_data();

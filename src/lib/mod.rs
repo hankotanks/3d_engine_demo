@@ -28,7 +28,7 @@ pub async fn run<F: 'static, G: 'static>(
     mut update: F, 
     mut process_events: G
 ) where 
-    F: FnMut(&mut tiles::World, &mut Vec<Box<dyn entities::Entity>>), 
+    F: FnMut(&mut camera::Camera, &mut tiles::World, &mut Vec<Box<dyn entities::Entity>>), 
     G: FnMut(&event::DeviceEvent, &mut camera::Camera, &mut tiles::World, &mut Vec<Box<dyn entities::Entity>>) -> bool {
 
     // Initialize the Window and EventLoop
@@ -109,7 +109,7 @@ pub async fn run<F: 'static, G: 'static>(
 
             // Update logic
             _ if accumulated_time >= fps => {
-                update(&mut state.world, &mut state.entities);
+                update(&mut state.camera, &mut state.world, &mut state.entities);
                 state.update();
 
                 accumulated_time -= fps;
