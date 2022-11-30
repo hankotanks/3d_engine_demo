@@ -1,13 +1,13 @@
 mod state;
 mod light;
 
-pub mod camera;
-
-pub mod objects;
-use objects::MeshObject;
-
 mod vertex;
 pub(crate) use vertex::Vertex;
+
+pub mod camera;
+pub mod drawable;
+pub mod tiles;
+pub mod entities;
 
 use std::time;
 
@@ -28,8 +28,8 @@ pub async fn run<F: 'static, G: 'static>(
     mut update: F, 
     mut process_events: G
 ) where 
-    F: FnMut(&mut Vec<Box<dyn MeshObject>>), 
-    G: FnMut(&event::DeviceEvent, &mut camera::Camera, &mut Vec<Box<dyn MeshObject>>) -> bool {
+    F: FnMut(&mut tiles::World, &mut Vec<Box<dyn entities::Entity>>), 
+    G: FnMut(&event::DeviceEvent, &mut camera::Camera, &mut tiles::World, &mut Vec<Box<dyn entities::Entity>>) -> bool {
 
     // Initialize the Window and EventLoop
     let event_loop = event_loop::EventLoop::new();
@@ -102,14 +102,14 @@ pub async fn run<F: 'static, G: 'static>(
             // The user can capture events from the window...
             // ...which can affect both the mesh and the camera
             event::Event::DeviceEvent { ref event, .. } => {
-                if process_events(event, &mut state.camera, &mut state.mesh) {
+                if process_events(event, &mut state.camera, &mut state.world, &mut state.entities) {
                     window.request_redraw();
                 }
             }
 
             // Update logic
             _ if accumulated_time >= fps => {
-                update(&mut state.mesh);
+                update(&mut state.world, &mut state.entities);
                 state.update();
 
                 accumulated_time -= fps;

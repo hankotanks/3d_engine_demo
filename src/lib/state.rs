@@ -5,12 +5,14 @@ use wgpu::util::DeviceExt;
 use crate::{
     camera,
     Vertex,
-    objects::MeshObject,
-    light
+    tiles::World,
+    light, 
+    entities::Entity
 };
 
 pub(crate) struct State {
-    pub mesh: Vec<Box<dyn MeshObject>>,
+    pub world: World,
+    pub entities: Vec<Box<dyn Entity>>,
 
     pub(crate) size: winit::dpi::PhysicalSize<u32>,
     pub(crate) surface: wgpu::Surface,
@@ -33,7 +35,9 @@ pub(crate) struct State {
 
 impl State {
     pub async fn new(window: &window::Window) -> Self {
-        let mesh = Vec::new();
+        let world = World::default();
+
+        let entities = Vec::new();
 
         let size = window.inner_size();
 
@@ -257,7 +261,8 @@ impl State {
         );
 
         Self {
-            mesh,
+            world,
+            entities,
             size,
             surface,
             device,
@@ -294,27 +299,20 @@ impl State {
     }
 
     pub(crate) fn update(&mut self) {
-        let mut vertices = Vec::new();
-        let mut indices = Vec::new();
-        for object in self.mesh.iter() {
-            let mut data = object.build_object_data();
+        let mut indices = self.world.indices.clone();
+        let mut vertices = self.world.vertices.clone();
 
-            let mut offset_indices = data.indices
+        for entity in self.entities.iter() {
+            let mut triangles = entity.build_object_data();
+            let mut offset_indices = triangles.indices
                 .iter()
                 .map(|i| *i + vertices.len() as u32)
                 .collect::<Vec<u32>>();
-
             indices.append(&mut offset_indices);
-            vertices.append(&mut data.vertices);
+            vertices.append(&mut triangles.vertices);
         }
 
-        self.vertex_buffer = self.device.create_buffer_init(
-            &wgpu::util::BufferInitDescriptor {
-                label: None,
-                contents: bytemuck::cast_slice(vertices.as_slice()),
-                usage: wgpu::BufferUsages::VERTEX
-            }
-        );
+        self.index_count = indices.len() as u32;
 
         self.index_buffer = self.device.create_buffer_init(
             &wgpu::util::BufferInitDescriptor {
@@ -324,17 +322,37 @@ impl State {
             }
         );
 
-        self.index_count = indices.len() as u32;
+        self.vertex_buffer = self.device.create_buffer_init(
+            &wgpu::util::BufferInitDescriptor {
+                label: None,
+                contents: bytemuck::cast_slice(vertices.as_slice()),
+                usage: wgpu::BufferUsages::VERTEX
+            }
+        );
 
         // Update light sources
         let mut light_count = 0;
-        for object in self.mesh.iter() {
-            if let Some(light) = object.light() {
+        for (.., tile) in self.world.tiles.iter() {
+            if let Some(light) = tile.light() {
                 self.lighting.light_uniforms[light_count].color = light;
                 self.lighting.light_uniforms[light_count].position = [
-                    object.position().x as f32,
-                    object.position().y as f32,
-                    object.position().z as f32,
+                    tile.position().x as f32,
+                    tile.position().y as f32,
+                    tile.position().z as f32,
+                    1.0
+                ];
+
+                light_count += 1;
+            }
+        }
+
+        for entity in self.entities.iter() {
+            if let Some(light) = entity.light() {
+                self.lighting.light_uniforms[light_count].color = light;
+                self.lighting.light_uniforms[light_count].position = [
+                    entity.center().x,
+                    entity.center().y,
+                    entity.center().z,
                     1.0
                 ];
 

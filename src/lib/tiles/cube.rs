@@ -1,10 +1,9 @@
 use super::{
-    MeshObject, 
-    MeshObjectData, 
-    private
+    drawable,
+    Tile
 };
 
-use crate::Vertex;
+use crate::{Vertex, drawable::Triangles};
 
 use cgmath::Point3;
 
@@ -41,19 +40,23 @@ impl Cube {
     }
 }
 
-impl MeshObject for Cube {
-    fn color(&self) -> [f32; 3] { self.color }
-    fn set_color(&mut self, color: [f32; 3]) { self.color = color; }
-
+impl Tile for Cube {
     fn position(&self) -> Point3<i16> { self.position }
-    fn set_position(&mut self, position: Point3<i16>) { self.position = position; }
 
-    fn light(&self) -> Option<[f32; 4]> { self.light }
-    fn set_light(&mut self, light: Option<[f32; 4]>) { self.light = light; }
+    fn set_position(&mut self, position: Point3<i16>) { self.position = position; }
 }
 
-impl private::MeshObject for Cube {
-    fn build_object_data(&self) -> MeshObjectData {
+impl drawable::Drawable for Cube {
+    fn center(&self) -> Point3<f32> { self.position.cast::<f32>().unwrap() }
+    fn set_center(&mut self, center: Point3<f32>) { self.position = center.cast::<i16>().unwrap(); }
+
+    fn color(&self) -> [f32; 3] { self.color }
+    fn set_color(&mut self, color: [f32; 3]) { self.color = color; }    
+
+    fn light(&self) -> Option<[f32; 4]> { self.light }
+    fn set_light(&mut self, light: [f32; 4]) { self.light = Some(light); }
+
+    fn build_object_data(&self) -> drawable::Triangles {
         let center = Point3::new(
             self.position.x as f32, 
             self.position.y as f32, 
@@ -138,6 +141,6 @@ impl private::MeshObject for Cube {
             23, 21, 20, 23, 20, 22
         ];
 
-        MeshObjectData { vertices, indices }
+        Triangles { vertices, indices }
     }
 }

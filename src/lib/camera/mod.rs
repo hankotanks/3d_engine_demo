@@ -2,7 +2,8 @@ use cgmath::{
     Point3,
     Matrix4, 
     SquareMatrix, 
-    EuclideanSpace, Vector3
+    EuclideanSpace, 
+    Vector3
 };
 
 pub struct Camera {
@@ -18,7 +19,7 @@ pub struct Camera {
 impl Default for Camera {
     fn default() -> Self {
         let mut camera = Self {
-            distance: 2.0,
+            distance: 10.0,
             eye: [0.0, 0.0, 0.0].into(),
             target: [0.0, 0.0, 0.0].into(),
             pitch: 1.5,

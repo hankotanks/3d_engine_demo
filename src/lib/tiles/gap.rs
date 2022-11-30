@@ -1,7 +1,6 @@
 use super::{
-    private, 
-    MeshObject, 
-    MeshObjectData
+    drawable,
+    Tile
 };
 
 use cgmath::Point3;
@@ -26,19 +25,22 @@ impl Gap {
     }
 }
 
-impl MeshObject for Gap { 
+impl Tile for Gap { 
+    fn position(&self) -> Point3<i16> { self.position }
+    fn set_position(&mut self, position: Point3<i16>) { self.position = position; }
+}
+
+impl drawable::Drawable for Gap {
+    fn center(&self) -> Point3<f32> { self.position.cast::<f32>().unwrap() }
+    fn set_center(&mut self, center: Point3<f32>) { self.position = center.cast::<i16>().unwrap(); }
+
     fn color(&self) -> [f32; 3] { [0.0; 3] }
     fn set_color(&mut self, _color: [f32; 3]) {  }
 
-    fn position(&self) -> Point3<i16> { self.position }
-    fn set_position(&mut self, position: Point3<i16>) { self.position = position; }
-
     fn light(&self) -> Option<[f32; 4]> { self.light }
-    fn set_light(&mut self, light: Option<[f32; 4]>) { self.light = light; }
-}
+    fn set_light(&mut self, light: [f32; 4]) { self.light = Some(light); }
 
-impl private::MeshObject for Gap {
-    fn build_object_data(&self) -> MeshObjectData {
-        MeshObjectData { vertices: Vec::new(), indices: Vec::new() }
+    fn build_object_data(&self) -> drawable::Triangles {
+        drawable::Triangles { vertices: Vec::new(), indices: Vec::new() }
     }
 }
