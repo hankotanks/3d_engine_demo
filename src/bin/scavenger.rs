@@ -49,7 +49,8 @@ fn main() {
                     pl
                 } ));
             } else {
-                camera.set_target(entities[0].center());
+                let center = entities[0].center();
+                camera.set_target((center.x, center.y.round(), center.z).into());
             }
         }
     };
@@ -81,7 +82,7 @@ fn main() {
                 true
             } else if !entities.is_empty() {
                 process_events(event, camera, entities, &mut pc);
-                let mut velocity = Vector3::new(0.0, 0.0, 0.0);
+                let mut velocity = entities[pc.index].velocity();
                 if pc.direction >> 0 & 1 == 1 { velocity.z -= if velocity.z == 0.0 { pc.initial_speed } else { pc.acceleration } }
                 if pc.direction >> 1 & 1 == 1 { velocity.z += if velocity.z == 0.0 { pc.initial_speed } else { pc.acceleration } }
                 if pc.direction >> 2 & 1 == 1 { velocity.x -=  if velocity.x == 0.0 { pc.initial_speed } else { pc.acceleration } }

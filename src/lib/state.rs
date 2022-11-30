@@ -303,29 +303,39 @@ impl State {
         let mut indices = self.world.indices.clone();
         let mut vertices = self.world.vertices.clone();
 
-        for entity in self.entities.iter_mut() {
-            // subtract the object's weight from it's velocity's y component
-            let mut velocity = entity.velocity() - Vector3::new(0.0, entity.weight(), 0.0);
-            let increment = velocity * 0.1;
+        fn apply_velocity(world: &World, entity: &mut Box<dyn Entity>, mut displacement: Vector3<f32>) {
+            let original_displacement = displacement;
+
+            // collision detection fails when the entity travels more than 1 tile in a single tick
+            displacement.x = displacement.x.clamp(-1.0, 1.0);
+            displacement.y = displacement.y.clamp(-1.0, 1.0);
+            displacement.z = displacement.z.clamp(-1.0, 1.0);
+        
+            let increment = displacement * 0.1;
 
             // Find the discrete coordinates of the tile containing the entity's new position (velocity + position)
             fn get_discrete_point(pt: Point3<f32>) -> Point3<i16> {
                 (pt.x.round() as i16, pt.y.round()as i16, pt.z.round() as i16).into()
             }
 
-            let mut _collided = false;
-            while self.world.contains(&get_discrete_point(entity.center() + velocity)) && !velocity.is_zero() {
-                _collided = true;
-                velocity -= increment;
+            let mut collided = false;
+            while world.contains(&get_discrete_point(entity.center() + displacement)) && !displacement.is_zero() {
+                collided = true;
+                displacement -= increment;
             }
 
-            entity.set_center(entity.center() + velocity);
+            if collided {
+                entity.set_velocity(entity.velocity() - original_displacement);
+            } else {
+               entity.set_velocity(entity.velocity() * (1.0 - entity.weight()));
+            }
 
-            // Check if it is filled
-            // If it is, mark a collision.
-            // while there is a collision, continue to scale back the entity's displacement vector, until...
-            // there isn't a collision OR the displacement vector == the 0 vector
-            // set the entity's new position with its previous position plus the displacement vector
+            entity.set_center(entity.center() + displacement);
+        }
+
+        for entity in self.entities.iter_mut() {
+            apply_velocity(&self.world, entity, entity.velocity());
+            apply_velocity(&self.world, entity, Vector3::new(0.0, entity.weight() * -1.0, 0.0));
         }
 
         for entity in self.entities.iter() {
