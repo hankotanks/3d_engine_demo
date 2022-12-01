@@ -1,8 +1,5 @@
-use super::{
-    drawable,
-    Tile
-};
 
+use block_engine_wgpu::world;
 use cgmath::Point3;
 
 pub struct Gap {
@@ -25,12 +22,12 @@ impl Gap {
     }
 }
 
-impl Tile for Gap { 
+impl world::Tile for Gap { 
     fn position(&self) -> Point3<i16> { self.position }
     fn set_position(&mut self, position: Point3<i16>) { self.position = position; }
 }
 
-impl drawable::Drawable for Gap {
+impl world::Drawable for Gap {
     fn center(&self) -> Point3<f32> { self.position.cast::<f32>().unwrap() }
     fn set_center(&mut self, center: Point3<f32>) { self.position = center.cast::<i16>().unwrap(); }
 
@@ -40,7 +37,7 @@ impl drawable::Drawable for Gap {
     fn light(&self) -> Option<[f32; 4]> { self.light }
     fn set_light(&mut self, light: [f32; 4]) { self.light = Some(light); }
 
-    fn build_object_data(&self) -> drawable::Triangles {
-        drawable::Triangles { vertices: Vec::new(), indices: Vec::new() }
+    fn build_object_data(&self) -> world::Triangles {
+        world::Triangles { vertices: Vec::new(), indices: Vec::new() }
     }
 }

@@ -2,12 +2,10 @@ mod state;
 mod light;
 
 mod vertex;
-pub(crate) use vertex::Vertex;
+pub use vertex::Vertex;
 
 pub mod camera;
-pub mod drawable;
-pub mod tiles;
-pub mod entities;
+pub mod world;
 
 use std::time;
 
@@ -28,8 +26,8 @@ pub async fn run<F: 'static, G: 'static>(
     mut update: F, 
     mut process_events: G
 ) where 
-    F: FnMut(&mut camera::Camera, &mut tiles::World, &mut Vec<Box<dyn entities::Entity>>), 
-    G: FnMut(&event::DeviceEvent, &mut camera::Camera, &mut tiles::World, &mut Vec<Box<dyn entities::Entity>>) -> bool {
+    F: FnMut(&mut camera::Camera, &mut world::World, &mut Vec<Box<dyn world::Entity>>), 
+    G: FnMut(&event::DeviceEvent, &mut camera::Camera, &mut world::World, &mut Vec<Box<dyn world::Entity>>) -> bool {
 
     // Initialize the Window and EventLoop
     let event_loop = event_loop::EventLoop::new();

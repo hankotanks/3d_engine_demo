@@ -1,21 +1,17 @@
-pub mod cube;
+pub(crate) mod drawable;
+pub use drawable::{ Drawable, Triangles };
+
+pub(crate) mod tile;
+pub use tile::Tile;
+
+pub(crate) mod entity;
+pub use entity::Entity;
+
+use crate::vertex::Vertex;
+
 use std::collections::HashMap;
 
 use cgmath::Point3;
-pub use cube::Cube;
-
-pub mod gap;
-pub use gap::Gap;
-
-use crate::{
-    drawable, 
-    vertex::Vertex
-};
-
-pub trait Tile: drawable::Drawable {
-    fn position(&self) -> cgmath::Point3<i16>;
-    fn set_position(&mut self, position: Point3<i16>);
-}
 
 #[derive(Default)]
 pub struct World {
@@ -51,6 +47,7 @@ impl World {
         self.tiles.get(&position)
     }
 
+    /*
     pub fn occupied(&self, center: Point3<f32>) -> bool {
         for (.., tile) in self.tiles.iter() {
             let pos = tile.center();
@@ -71,4 +68,5 @@ impl World {
         
         false
     }
+    */
 }

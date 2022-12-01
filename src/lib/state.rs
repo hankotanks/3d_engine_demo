@@ -6,14 +6,13 @@ use wgpu::util::DeviceExt;
 use crate::{
     camera,
     Vertex,
-    tiles::World,
-    light, 
-    entities::Entity
+    world,
+    light,
 };
 
 pub(crate) struct State {
-    pub world: World,
-    pub entities: Vec<Box<dyn Entity>>,
+    pub world: world::World,
+    pub entities: Vec<Box<dyn world::Entity>>,
 
     pub(crate) size: winit::dpi::PhysicalSize<u32>,
     pub(crate) surface: wgpu::Surface,
@@ -36,7 +35,7 @@ pub(crate) struct State {
 
 impl State {
     pub async fn new(window: &window::Window) -> Self {
-        let world = World::default();
+        let world = world::World::default();
 
         let entities = Vec::new();
 
@@ -303,7 +302,7 @@ impl State {
         let mut indices = self.world.indices.clone();
         let mut vertices = self.world.vertices.clone();
 
-        fn apply_velocity(world: &World, entity: &mut Box<dyn Entity>, mut displacement: Vector3<f32>) {
+        fn apply_velocity(world: &world::World, entity: &mut Box<dyn world::Entity>, mut displacement: Vector3<f32>) {
             let original_displacement = displacement;
 
             // collision detection fails when the entity travels more than 1 tile in a single tick

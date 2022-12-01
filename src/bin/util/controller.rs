@@ -1,5 +1,4 @@
-use block_engine_wgpu::{camera::Camera, tiles::{self, World}, entities};
-use cgmath::{Vector3, Point3};
+use block_engine_wgpu::{camera::Camera, world};
 use winit::event;
 
 const ZOOM_SPEED: f32 = 0.6;
@@ -22,7 +21,7 @@ pub struct PlayerController {
 pub fn process_events(
     event: &event::DeviceEvent, 
     camera: &mut Camera,
-    entities: &mut Vec<Box<dyn entities::Entity>>,
+    entities: &mut Vec<Box<dyn world::Entity>>,
     player_controller: &mut PlayerController
 ) {
     match &event {        

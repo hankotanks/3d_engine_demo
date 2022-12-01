@@ -1,14 +1,15 @@
 mod util;
-
-use cgmath::{Zero, Vector3};
-use util::{terrain, controller::{process_events, PlayerController}};
+use util::{
+    terrain, 
+    controller, 
+    tile, 
+    entity
+};
 
 use block_engine_wgpu::{
     run,
     Config,
-    tiles,
-    camera::{Camera, CameraBuilder, self}, 
-    entities, drawable::Drawable    
+    camera, world  
 };
 
 use winit::event;
@@ -22,8 +23,8 @@ fn main() {
         let mut init = true;
         move |
             camera: &mut camera::Camera,
-            world: &mut tiles::World, 
-            entities: &mut Vec<Box<dyn entities::Entity>>
+            world: &mut world::World, 
+            entities: &mut Vec<Box<dyn world::Entity>>
         | {
             if init {
                 init = false;
@@ -31,21 +32,21 @@ fn main() {
                 terrain::generate(world);
 
                 world.add( {
-                    let mut pl = tiles::Cube::new(
+                    let mut pl = tile::Cube::new(
                         (1, 1, 1).into(), [1.0; 3]);
-                    pl.set_light([1.0; 4]);
+                    world::Drawable::set_light(&mut pl, [1.0; 4]);
                     pl
                 } );
 
                 entities.push(Box::new( { 
-                    let mut pl = entities::PlaceholderEntity {
+                    let mut pl = entity::PlaceholderEntity {
                         center: (0.0, 3.0, 0.0).into(),
                         color: [1.0; 3],
                         light: Some([1.0, 0.4, 0.1, 0.4]),
                         velocity: (0.0, 0.0, 0.0).into(),
                         weight: 0.1,
                     };
-                    pl.set_light([1.0, 0.4, 0.1, 0.4]);
+                    world::Drawable::set_light(&mut pl, [1.0, 0.4, 0.1, 0.4]);
                     pl
                 } ));
             } else {
@@ -57,7 +58,7 @@ fn main() {
 
     let process_events = {
         let mut init = true;
-        let mut pc = PlayerController { 
+        let mut pc = controller::PlayerController { 
             index: 0, 
             direction: 0,
             initial_speed: 0.1,
@@ -67,13 +68,13 @@ fn main() {
     
         move |
             event: &event::DeviceEvent, 
-            camera: &mut Camera, 
-            _world: &mut tiles::World,
-            entities: &mut Vec<Box<dyn entities::Entity>>
+            camera: &mut camera::Camera, 
+            _world: &mut world::World,
+            entities: &mut Vec<Box<dyn world::Entity>>
         | -> bool {
             if init && !entities.is_empty() { 
                 init = false;
-                *camera = CameraBuilder::new()
+                *camera = camera::CameraBuilder::new()
                     .pitch(1.0)
                     .yaw(0.1)
                     .target([0.0; 3].into())
@@ -81,7 +82,7 @@ fn main() {
                 
                 true
             } else if !entities.is_empty() {
-                process_events(event, camera, entities, &mut pc);
+                controller::process_events(event, camera, entities, &mut pc);
                 let mut velocity = entities[pc.index].velocity();
                 if pc.direction >> 0 & 1 == 1 { velocity.z -= if velocity.z == 0.0 { pc.initial_speed } else { pc.acceleration } }
                 if pc.direction >> 1 & 1 == 1 { velocity.z += if velocity.z == 0.0 { pc.initial_speed } else { pc.acceleration } }

@@ -1,10 +1,4 @@
-use super::{
-    drawable,
-    Tile
-};
-
-use crate::{Vertex, drawable::Triangles};
-
+use block_engine_wgpu::{world, Vertex};
 use cgmath::Point3;
 
 pub struct Cube {
@@ -40,13 +34,13 @@ impl Cube {
     }
 }
 
-impl Tile for Cube {
+impl world::Tile for Cube {
     fn position(&self) -> Point3<i16> { self.position }
 
     fn set_position(&mut self, position: Point3<i16>) { self.position = position; }
 }
 
-impl drawable::Drawable for Cube {
+impl world::Drawable for Cube {
     fn center(&self) -> Point3<f32> { self.position.cast::<f32>().unwrap() }
     fn set_center(&mut self, center: Point3<f32>) { self.position = center.cast::<i16>().unwrap(); }
 
@@ -56,7 +50,7 @@ impl drawable::Drawable for Cube {
     fn light(&self) -> Option<[f32; 4]> { self.light }
     fn set_light(&mut self, light: [f32; 4]) { self.light = Some(light); }
 
-    fn build_object_data(&self) -> drawable::Triangles {
+    fn build_object_data(&self) -> world::Triangles {
         let center = Point3::new(
             self.position.x as f32, 
             self.position.y as f32, 
@@ -141,6 +135,6 @@ impl drawable::Drawable for Cube {
             23, 21, 20, 23, 20, 22
         ];
 
-        Triangles { vertices, indices }
+        world::Triangles { vertices, indices }
     }
 }

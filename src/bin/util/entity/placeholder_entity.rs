@@ -1,8 +1,5 @@
+use block_engine_wgpu::world;
 use cgmath::{Point3, Vector3, Zero};
-
-use crate::drawable::Drawable;
-
-use super::Entity;
 
 pub struct PlaceholderEntity {
     pub center: Point3<f32>,
@@ -13,7 +10,7 @@ pub struct PlaceholderEntity {
     pub weight: f32
 }
 
-impl Entity for PlaceholderEntity {
+impl world::Entity for PlaceholderEntity {
     fn velocity(&self) -> cgmath::Vector3<f32> {
         self.velocity
     }
@@ -35,7 +32,7 @@ impl Entity for PlaceholderEntity {
     }
 }
 
-impl Drawable for PlaceholderEntity {
+impl world::Drawable for PlaceholderEntity {
     fn center(&self) -> Point3<f32> {
         self.center
     }
@@ -60,8 +57,8 @@ impl Drawable for PlaceholderEntity {
         self.light = Some(light);
     }
 
-    fn build_object_data(&self) -> crate::drawable::Triangles {
-        crate::drawable::Triangles {
+    fn build_object_data(&self) -> world::Triangles {
+        world::Triangles {
             vertices: Vec::new(),
             indices: Vec::new(),
         }
