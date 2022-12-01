@@ -5,15 +5,11 @@ pub(crate) mod tile;
 pub use tile::Tile;
 
 pub(crate) mod entity;
-pub use entity::Entity;
+pub use entity::{ Entity, EntityHandler };
 
 use crate::{vertex::Vertex, light};
 
-use std::{
-    cell::RefCell,
-    rc::{Rc},
-    collections::HashMap, borrow::BorrowMut, ops::Deref
-};
+use std::collections::HashMap;
 
 use cgmath::{ 
     Point3, 
@@ -32,7 +28,7 @@ pub struct World {
     tile_objects: HashMap<Point3<i16>, Box<dyn Tile>>,
     tile_vertices: Vec<Vertex>,
     tile_indices: Vec<u32>,
-    entity_objects: Vec<Rc<RefCell<dyn Entity>>>,
+    entity_objects: Vec<EntityHandler>,
 }
 
 impl World {
@@ -50,12 +46,12 @@ impl World {
         self.tile_vertices.append(&mut triangles.vertices);
     }
 
-    pub fn add_entity(&mut self, entity: impl Entity + 'static) -> Rc<RefCell<dyn Entity>> {
-        let entity_reference = Rc::new(RefCell::new(entity));
-        let entity_reference_clone = Rc::clone(&entity_reference);
-        self.entity_objects.push(entity_reference);
+    pub fn add_entity(&mut self, entity: impl Entity + 'static) -> EntityHandler {
+        let entity_handler = EntityHandler::new(entity);
+        let entity_handler_clone = entity_handler.clone();
+        self.entity_objects.push(entity_handler);
 
-        entity_reference_clone
+        entity_handler_clone
     }
 
     pub fn contains(&self, tile: &Point3<i16>) -> bool {
@@ -90,7 +86,7 @@ impl World {
         entity_index: usize,
         mut displacement: Vector3<f32>
     ) {
-        let entity = Rc::clone(&self.entity_objects[entity_index]);
+        let mut entity = self.entity_objects[entity_index].clone();
 
         let original_displacement = displacement;
 
@@ -119,7 +115,7 @@ impl World {
         }
 
         {
-            let mut entity = entity.deref().borrow_mut();
+            let mut entity = entity.borrow_mut();
 
             entity.set_center(center + displacement);
             if collided {

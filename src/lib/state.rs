@@ -1,4 +1,3 @@
-use cgmath::{Vector3, Point3, Zero};
 use winit::window;
 
 use wgpu::util::DeviceExt;
@@ -25,9 +24,9 @@ pub(crate) struct State {
     pub(crate) camera_uniform: camera::CameraUniform,
     pub(crate) camera_buffer: wgpu::Buffer,
     pub(crate) camera_bind_group: wgpu::BindGroup,
-    pub(crate) lighting: light::LightSources,
-    pub(crate) lighting_buffer: wgpu::Buffer,
-    pub(crate) lighting_bind_group: wgpu::BindGroup,
+    pub(crate) light_sources: light::LightSources,
+    pub(crate) light_buffer: wgpu::Buffer,
+    pub(crate) light_bind_group: wgpu::BindGroup,
     pub(crate) depth_texture_view: wgpu::TextureView,
     pub(crate) render_pipeline: wgpu::RenderPipeline
 }
@@ -142,24 +141,24 @@ impl State {
             }
         ) };
 
-        let lighting = light::LightSources {
+        let light_sources = light::LightSources {
             light_uniforms: [
                 light::Light::default(); 
                 light::MAX_LIGHT_SOURCES
             ]
         };
 
-        let lighting_buffer = device.create_buffer_init(
+        let light_buffer = device.create_buffer_init(
             &wgpu::util::BufferInitDescriptor {
                 label: None,
-                contents: bytemuck::cast_slice(&[lighting]),
+                contents: bytemuck::cast_slice(&[light_sources]),
                 usage: { 
                     wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_DST
                 },
             }
         );
 
-        let lighting_bind_group_layout = { 
+        let light_bind_group_layout = { 
             device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
                 entries: &[
                     wgpu::BindGroupLayoutEntry {
@@ -178,13 +177,13 @@ impl State {
             }
         ) };
 
-        let lighting_bind_group = { 
+        let light_bind_group = { 
             device.create_bind_group(&wgpu::BindGroupDescriptor {
-                layout: &lighting_bind_group_layout,
+                layout: &light_bind_group_layout,
                 entries: &[
                     wgpu::BindGroupEntry {
                         binding: 0,
-                        resource: lighting_buffer.as_entire_binding(),
+                        resource: light_buffer.as_entire_binding(),
                     }
                 ],
                 label: None
@@ -202,7 +201,7 @@ impl State {
                 label: None,
                 bind_group_layouts: &[
                     &camera_bind_group_layout,
-                    &lighting_bind_group_layout
+                    &light_bind_group_layout
                 ],
                 push_constant_ranges: &[]
             }
@@ -271,9 +270,9 @@ impl State {
             camera_uniform,
             camera_buffer,
             camera_bind_group,
-            lighting,
-            lighting_buffer,
-            lighting_bind_group,
+            light_sources,
+            light_buffer,
+            light_bind_group,
             depth_texture_view,
             render_pipeline
         }
@@ -298,13 +297,12 @@ impl State {
         self.world.resolve_entity_physics();
         
        (self.vertex_buffer, self.index_buffer, self.index_count) = self.world.build_geometry_buffers(&mut self.device);
-
-       let (light_sources, ..) = self.world.build_light_sources();
+       (self.light_sources, ..) = self.world.build_light_sources();
 
         self.queue.write_buffer(
-            &self.lighting_buffer, 
+            &self.light_buffer, 
             0, 
-            bytemuck::cast_slice(&[light_sources])
+            bytemuck::cast_slice(&[self.light_sources])
         );
 
         self.camera_uniform.update_projection(&self.camera);
@@ -361,7 +359,7 @@ impl State {
 
             // Camera and light bind groups
             render_pass.set_bind_group(0, &self.camera_bind_group, &[]);
-            render_pass.set_bind_group(1, &self.lighting_bind_group, &[]);
+            render_pass.set_bind_group(1, &self.light_bind_group, &[]);
 
             // Set vertex and index buffers
             render_pass.set_vertex_buffer(

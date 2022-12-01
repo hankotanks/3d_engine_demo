@@ -1,5 +1,4 @@
 mod util;
-use std::{borrow::Borrow, ops::Deref};
 
 use util::{
     terrain, 
@@ -11,7 +10,14 @@ use util::{
 use block_engine_wgpu::{
     run,
     Config,
-    camera, world  
+    camera, 
+    world  
+};
+
+use std::{
+    ops::Deref, 
+    rc::Rc, 
+    cell::RefCell
 };
 
 use winit::event;
@@ -21,7 +27,7 @@ fn main() {
         fps: 60
     };
 
-    let mut player: std::rc::Rc<std::cell::RefCell<Option<std::rc::Rc<std::cell::RefCell<dyn world::Entity>>>>> = std::rc::Rc::new(std::cell::RefCell::new(None));
+    let player: Rc<RefCell<Option<world::EntityHandler>>> = Rc::new(RefCell::new(None));
 
     let update = {
         let mut init = true;
@@ -55,7 +61,7 @@ fn main() {
                     pl
                 } ));
             } else if let Some(pl) = player_ref.deref().borrow().as_ref() {
-                let center = pl.deref().borrow().center();
+                let center = pl.borrow().center();
                 camera.set_target((center.x, center.y.round(), center.z).into());
             }
         }
@@ -76,7 +82,7 @@ fn main() {
         move |
             event: &event::DeviceEvent, 
             camera: &mut camera::Camera, 
-            world: &mut world::World,
+            _world: &mut world::World,
         | -> bool {
             if init && player_ref.deref().borrow().is_some() { 
                 init = false;
@@ -87,18 +93,27 @@ fn main() {
                     .build();
                 
                 true
-            } else if let Some(pl) = player.deref().borrow().as_ref() {
+            } else if player_ref.deref().borrow().is_some() {
                 controller::process_events(event, camera, &mut pc);
 
-                let mut entity = pl.deref().borrow_mut();
-                
-                let mut velocity = entity.velocity();
-                if pc.direction >> 0 & 1 == 1 { velocity.z -= if velocity.z == 0.0 { pc.initial_speed } else { pc.acceleration } }
-                if pc.direction >> 1 & 1 == 1 { velocity.z += if velocity.z == 0.0 { pc.initial_speed } else { pc.acceleration } }
-                if pc.direction >> 2 & 1 == 1 { velocity.x -=  if velocity.x == 0.0 { pc.initial_speed } else { pc.acceleration } }
-                if pc.direction >> 3 & 1 == 1 { velocity.x +=  if velocity.x == 0.0 { pc.initial_speed } else { pc.acceleration } }
+                let b = player_ref.deref().take();
+                if let Some(mut eh) = b {
+                    {
+                        let mut entity = eh.borrow_mut();
 
-                entity.set_velocity(velocity);
+                        let mut velocity = entity.velocity();
+                        if pc.direction >> 0 & 1 == 1 { velocity.z -= if velocity.z == 0.0 { pc.initial_speed } else { pc.acceleration } }
+                        if pc.direction >> 1 & 1 == 1 { velocity.z += if velocity.z == 0.0 { pc.initial_speed } else { pc.acceleration } }
+                        if pc.direction >> 2 & 1 == 1 { velocity.x -=  if velocity.x == 0.0 { pc.initial_speed } else { pc.acceleration } }
+                        if pc.direction >> 3 & 1 == 1 { velocity.x +=  if velocity.x == 0.0 { pc.initial_speed } else { pc.acceleration } }
+    
+                        entity.set_velocity(velocity);
+                    }
+                    
+
+                    (*player_ref.deref().borrow_mut()) = Some(eh);
+                }                
+                
                 true
             } else {
                 false

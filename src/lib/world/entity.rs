@@ -1,3 +1,8 @@
+use std::{
+    cell::{RefCell, Ref, RefMut}, 
+    rc::Rc, ops::Deref
+};
+
 use cgmath::Vector3;
 
 use super::drawable;
@@ -10,4 +15,21 @@ pub trait Entity: drawable::Drawable {
     fn set_weight(&mut self, weight: f32);
 
     fn is_in_motion(&self) -> bool;
+}
+
+#[derive(Clone)]
+pub struct EntityHandler(Rc<RefCell<dyn Entity>>);
+
+impl EntityHandler {
+    pub fn new(entity: impl Entity + 'static) -> Self {
+        Self(Rc::new(RefCell::new(entity)))
+    }
+
+    pub fn borrow(&self) -> Ref<'_, dyn Entity> {
+        self.0.deref().borrow()
+    }
+
+    pub fn borrow_mut(&mut self) -> RefMut<'_, dyn Entity> {
+        self.0.deref().borrow_mut()
+    }
 }

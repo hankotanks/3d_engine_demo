@@ -1,4 +1,4 @@
-use block_engine_wgpu::{camera::Camera, world};
+use block_engine_wgpu::camera;
 use winit::event;
 
 const ZOOM_SPEED: f32 = 0.6;
@@ -20,7 +20,7 @@ pub struct PlayerController {
 
 pub fn process_events(
     event: &event::DeviceEvent, 
-    camera: &mut Camera,
+    camera: &mut camera::Camera,
     player_controller: &mut PlayerController
 ) {
     match &event {        
