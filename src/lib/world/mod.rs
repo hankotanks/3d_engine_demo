@@ -5,9 +5,12 @@ pub(crate) mod tile;
 pub use tile::Tile;
 
 pub(crate) mod entity;
-pub use entity::{ Entity, EntityHandler };
+pub use entity::{ Entity, EntityHandle };
 
-use crate::{vertex::Vertex, light};
+use crate::{
+    vertex::Vertex, 
+    light
+};
 
 use std::collections::HashMap;
 
@@ -24,14 +27,15 @@ use wgpu::{
 };
 
 #[derive(Default)]
-pub struct World {
+pub struct World<'a> {
     tile_objects: HashMap<Point3<i16>, Box<dyn Tile>>,
     tile_vertices: Vec<Vertex>,
     tile_indices: Vec<u32>,
-    entity_objects: Vec<EntityHandler>,
+    entity_objects: Vec<EntityHandle>,
+    entity_tags: HashMap<&'a str, EntityHandle>
 }
 
-impl World {
+impl<'a> World<'a> {
     pub fn add_tile(&mut self, tile: impl Tile + 'static) {
         let mut triangles = tile.build_object_data();
 
@@ -46,24 +50,36 @@ impl World {
         self.tile_vertices.append(&mut triangles.vertices);
     }
 
-    pub fn add_entity(&mut self, entity: impl Entity + 'static) -> EntityHandler {
-        let entity_handler = EntityHandler::new(entity);
-        let entity_handler_clone = entity_handler.clone();
-        self.entity_objects.push(entity_handler);
+    pub fn add_entity(&mut self, entity: impl Entity + 'static) -> EntityHandle {
+        let handle = EntityHandle::new(entity);
+        let handle_clone = handle.clone();
+        self.entity_objects.push(handle);
 
-        entity_handler_clone
+        handle_clone
     }
 
-    pub fn contains(&self, tile: &Point3<i16>) -> bool {
-        self.tile_objects.contains_key(tile)
+    pub fn add_entity_with_tag(&mut self, entity: impl Entity + 'static, tag: &'a str) -> EntityHandle {
+        let handle = self.add_entity(entity);
+        let handle_clone = handle.clone();
+        self.entity_tags.insert(tag, handle);
+
+        handle_clone
+    } 
+
+    pub fn contains_tile(&self, position: &Point3<i16>) -> bool {
+        self.tile_objects.contains_key(position)
     }
 
-    pub fn is_empty(&self) -> bool {
-        self.tile_objects.is_empty() && self.entity_objects.is_empty()
+    pub fn contains_entity(&self, tag: &str) -> bool {
+        self.entity_tags.contains_key(tag)
     }
 
     pub fn get_tile(&self, position: Point3<i16>) -> Option<&Box<dyn Tile + 'static>> {
         self.tile_objects.get(&position)
+    }
+
+    pub fn get_entity(&self, tag: &str) -> Option<EntityHandle> {
+        self.entity_tags.get(tag).cloned()
     }
 
     pub(crate) fn resolve_entity_physics(&mut self) {
@@ -109,7 +125,7 @@ impl World {
         };
 
         let mut collided = false;
-        while self.contains(&get_discrete_point(center + displacement)) && !displacement.is_zero() {
+        while self.contains_tile(&get_discrete_point(center + displacement)) && !displacement.is_zero() {
             collided = true;
             displacement -= increment;
         }
@@ -202,27 +218,4 @@ impl World {
 
         (vertex_buffer, index_buffer, index_count)
     }
-
-    /*
-    pub fn occupied(&self, center: Point3<f32>) -> bool {
-        for (.., tile) in self.tiles.iter() {
-            let pos = tile.center();
-            let x_min = pos.x - 0.5;
-            let x_max = pos.x + 0.5;
-            let y_min = pos.y - 0.5;
-            let y_max = pos.y + 0.5;
-            let z_min = pos.z - 0.5;
-            let z_max = pos.z + 0.5;
-
-            let xc = x_min < center.x && center.x < x_max;
-            let yc = y_min < center.y && center.y < y_max;
-            let zc = z_min < center.z && center.z < z_max;
-            if xc && yc && zc { 
-                return true;
-            }
-        }
-        
-        false
-    }
-    */
 }

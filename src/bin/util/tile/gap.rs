@@ -17,6 +17,7 @@ impl Default for Gap {
 }
 
 impl Gap {
+    #[allow(unused)]
     pub fn new(position: Point3<i16>) -> Self {
         Self { position, light: None }
     }

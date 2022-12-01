@@ -10,7 +10,7 @@ use crate::{
 };
 
 pub(crate) struct State {
-    pub world: world::World,
+    pub world: world::World<'static>,
 
     pub(crate) size: winit::dpi::PhysicalSize<u32>,
     pub(crate) surface: wgpu::Surface,

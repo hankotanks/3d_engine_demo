@@ -18,9 +18,9 @@ pub trait Entity: drawable::Drawable {
 }
 
 #[derive(Clone)]
-pub struct EntityHandler(Rc<RefCell<dyn Entity>>);
+pub struct EntityHandle(Rc<RefCell<dyn Entity>>);
 
-impl EntityHandler {
+impl EntityHandle {
     pub fn new(entity: impl Entity + 'static) -> Self {
         Self(Rc::new(RefCell::new(entity)))
     }

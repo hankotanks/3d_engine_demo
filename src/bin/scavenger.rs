@@ -14,12 +14,6 @@ use block_engine_wgpu::{
     world  
 };
 
-use std::{
-    ops::Deref, 
-    rc::Rc, 
-    cell::RefCell
-};
-
 use winit::event;
 
 fn main() {
@@ -27,11 +21,8 @@ fn main() {
         fps: 60
     };
 
-    let player: Rc<RefCell<Option<world::EntityHandler>>> = Rc::new(RefCell::new(None));
-
     let update = {
         let mut init = true;
-        let player_ref = player.clone();
         move |
             camera: &mut camera::Camera,
             world: &mut world::World,
@@ -48,20 +39,22 @@ fn main() {
                     pl
                 } );
 
-                let mut pl = player_ref.deref().borrow_mut();
-                *pl = Some(world.add_entity( { 
-                    let mut pl = entity::PlaceholderEntity {
-                        center: (0.0, 3.0, 0.0).into(),
-                        color: [1.0; 3],
-                        light: Some([1.0, 0.4, 0.1, 0.4]),
-                        velocity: (0.0, 0.0, 0.0).into(),
-                        weight: 0.1,
-                    };
-                    world::Drawable::set_light(&mut pl, [1.0, 0.4, 0.1, 0.4]);
-                    pl
-                } ));
-            } else if let Some(pl) = player_ref.deref().borrow().as_ref() {
-                let center = pl.borrow().center();
+                world.add_entity_with_tag( 
+                    { 
+                        let mut pl = entity::PlaceholderEntity {
+                            center: (0.0, 3.0, 0.0).into(),
+                            color: [1.0; 3],
+                            light: Some([1.0, 0.4, 0.1, 0.4]),
+                            velocity: (0.0, 0.0, 0.0).into(),
+                            weight: 0.1,
+                        };
+                        world::Drawable::set_light(&mut pl, [1.0, 0.4, 0.1, 0.4]);
+                        pl
+                    },
+                    "player"
+                 );
+            } else {
+                let center = world.get_entity("player").unwrap().borrow().center();
                 camera.set_target((center.x, center.y.round(), center.z).into());
             }
         }
@@ -76,15 +69,13 @@ fn main() {
             maximum_speed: 0.2,
             acceleration: 0.05 
         };
-
-        let player_ref = std::rc::Rc::clone(&player);
     
         move |
             event: &event::DeviceEvent, 
             camera: &mut camera::Camera, 
-            _world: &mut world::World,
+            world: &mut world::World,
         | -> bool {
-            if init && player_ref.deref().borrow().is_some() { 
+            if init && world.contains_entity("player") { 
                 init = false;
                 *camera = camera::CameraBuilder::new()
                     .pitch(1.0)
@@ -93,26 +84,21 @@ fn main() {
                     .build();
                 
                 true
-            } else if player_ref.deref().borrow().is_some() {
+            } else if world.contains_entity("player") {
                 controller::process_events(event, camera, &mut pc);
 
-                let b = player_ref.deref().take();
-                if let Some(mut eh) = b {
-                    {
-                        let mut entity = eh.borrow_mut();
+                let mut handle = world.get_entity("player").unwrap();
+                let mut entity = handle.borrow_mut();
+                
+                {
+                    let mut velocity = entity.velocity();
+                    if pc.direction >> 0 & 1 == 1 { velocity.z -= if velocity.z == 0.0 { pc.initial_speed } else { pc.acceleration } }
+                    if pc.direction >> 1 & 1 == 1 { velocity.z += if velocity.z == 0.0 { pc.initial_speed } else { pc.acceleration } }
+                    if pc.direction >> 2 & 1 == 1 { velocity.x -=  if velocity.x == 0.0 { pc.initial_speed } else { pc.acceleration } }
+                    if pc.direction >> 3 & 1 == 1 { velocity.x +=  if velocity.x == 0.0 { pc.initial_speed } else { pc.acceleration } }
 
-                        let mut velocity = entity.velocity();
-                        if pc.direction >> 0 & 1 == 1 { velocity.z -= if velocity.z == 0.0 { pc.initial_speed } else { pc.acceleration } }
-                        if pc.direction >> 1 & 1 == 1 { velocity.z += if velocity.z == 0.0 { pc.initial_speed } else { pc.acceleration } }
-                        if pc.direction >> 2 & 1 == 1 { velocity.x -=  if velocity.x == 0.0 { pc.initial_speed } else { pc.acceleration } }
-                        if pc.direction >> 3 & 1 == 1 { velocity.x +=  if velocity.x == 0.0 { pc.initial_speed } else { pc.acceleration } }
-    
-                        entity.set_velocity(velocity);
-                    }
-                    
-
-                    (*player_ref.deref().borrow_mut()) = Some(eh);
-                }                
+                    entity.set_velocity(velocity);
+                }                          
                 
                 true
             } else {
