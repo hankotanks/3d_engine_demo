@@ -10,8 +10,9 @@ pub use entity::Entity;
 use crate::{vertex::Vertex, light};
 
 use std::{
-    sync,
-    collections::HashMap, ops::DerefMut
+    cell::RefCell,
+    rc::{Rc},
+    collections::HashMap, borrow::BorrowMut, ops::Deref
 };
 
 use cgmath::{ 
@@ -31,7 +32,7 @@ pub struct World {
     tile_objects: HashMap<Point3<i16>, Box<dyn Tile>>,
     tile_vertices: Vec<Vertex>,
     tile_indices: Vec<u32>,
-    entity_objects: Vec<Box<dyn Entity>>,
+    entity_objects: Vec<Rc<RefCell<dyn Entity>>>,
 }
 
 impl World {
@@ -49,8 +50,12 @@ impl World {
         self.tile_vertices.append(&mut triangles.vertices);
     }
 
-    pub fn add_entity(&mut self, entity: impl Entity + 'static) {
-        self.entity_objects.push(Box::new(entity));
+    pub fn add_entity(&mut self, entity: impl Entity + 'static) -> Rc<RefCell<dyn Entity>> {
+        let entity_reference = Rc::new(RefCell::new(entity));
+        let entity_reference_clone = Rc::clone(&entity_reference);
+        self.entity_objects.push(entity_reference);
+
+        entity_reference_clone
     }
 
     pub fn contains(&self, tile: &Point3<i16>) -> bool {
@@ -65,14 +70,10 @@ impl World {
         self.tile_objects.get(&position)
     }
 
-    pub fn get_entity(&mut self, index: usize) -> &mut Box<dyn Entity> {
-        &mut self.entity_objects[index]
-    }
-
     pub(crate) fn resolve_entity_physics(&mut self) {
         for index in 0..self.entity_objects.len() {
             let (velocity, weight) = {
-                let entity = &self.entity_objects[index];
+                let entity = self.entity_objects[index].borrow(); // TODO
                 
                 (entity.velocity(), entity.weight())
             };
@@ -89,6 +90,8 @@ impl World {
         entity_index: usize,
         mut displacement: Vector3<f32>
     ) {
+        let entity = Rc::clone(&self.entity_objects[entity_index]);
+
         let original_displacement = displacement;
 
         // collision detection fails when the entity travels more than 1 tile in a single tick
@@ -103,23 +106,29 @@ impl World {
             (pt.x.round() as i16, pt.y.round()as i16, pt.z.round() as i16).into()
         }
 
-        let entity = &self.entity_objects[entity_index];
+        
+        let (center, weight, velocity) = {
+            let entity = entity.borrow();
+            (entity.center(), entity.weight(), entity.velocity())
+        };
 
         let mut collided = false;
-        while self.contains(&get_discrete_point(entity.center() + displacement)) && !displacement.is_zero() {
+        while self.contains(&get_discrete_point(center + displacement)) && !displacement.is_zero() {
             collided = true;
             displacement -= increment;
         }
 
-        let entity = &mut self.entity_objects[entity_index];
+        {
+            let mut entity = entity.deref().borrow_mut();
 
-        entity.set_center(entity.center() + displacement);
-
-        if collided {
-            entity.set_velocity(entity.velocity() - original_displacement);
-        } else {
-            entity.set_velocity(entity.velocity() * (1.0 - entity.weight()));
+            entity.set_center(center + displacement);
+            if collided {
+                entity.set_velocity(velocity - original_displacement);
+            } else {
+                entity.set_velocity(velocity * (1.0 - weight));
+            }
         }
+        
     }
 
     pub(crate) fn build_light_sources(&self) -> (light::LightSources, u32) {
@@ -145,7 +154,7 @@ impl World {
             }
         }
 
-        for entity in self.entity_objects.iter() {
+        for entity in self.entity_objects.iter().map(|e| e.borrow()) { // TODO
             if let Some(light) = entity.light() {
                 light_sources.light_uniforms[light_count].color = light;
                 light_sources.light_uniforms[light_count].position = [
@@ -167,7 +176,7 @@ impl World {
         let mut indices = self.tile_indices.clone();
         let mut vertices = self.tile_vertices.clone();
 
-        for entity in self.entity_objects.iter() {
+        for entity in self.entity_objects.iter().map(|e| e.borrow()) { // TODO
             let mut triangles = entity.build_object_data();
             let mut offset_indices = triangles.indices
                 .iter()
