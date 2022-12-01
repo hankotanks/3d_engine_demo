@@ -8,7 +8,7 @@ pub fn generate(mesh: &mut world::World) {
     for x in -10i16..10 {
         for y in -10i16..10 {
             height = match (x, y) { (-10 | 9, ..) | (.., -10 | 9) => 1, _ => 0 };
-            mesh.add(tile::Cube::new(
+            mesh.add_tile(tile::Cube::new(
                 (x, height, y).into(),
                 [1.0; 3]
             ));

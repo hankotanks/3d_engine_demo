@@ -21,7 +21,6 @@ pub struct PlayerController {
 pub fn process_events(
     event: &event::DeviceEvent, 
     camera: &mut Camera,
-    entities: &mut Vec<Box<dyn world::Entity>>,
     player_controller: &mut PlayerController
 ) {
     match &event {        

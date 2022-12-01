@@ -12,7 +12,6 @@ use crate::{
 
 pub(crate) struct State {
     pub world: world::World,
-    pub entities: Vec<Box<dyn world::Entity>>,
 
     pub(crate) size: winit::dpi::PhysicalSize<u32>,
     pub(crate) surface: wgpu::Surface,
@@ -36,8 +35,6 @@ pub(crate) struct State {
 impl State {
     pub async fn new(window: &window::Window) -> Self {
         let world = world::World::default();
-
-        let entities = Vec::new();
 
         let size = window.inner_size();
 
@@ -262,7 +259,6 @@ impl State {
 
         Self {
             world,
-            entities,
             size,
             surface,
             device,
@@ -299,106 +295,16 @@ impl State {
     }
 
     pub(crate) fn update(&mut self) {
-        let mut indices = self.world.indices.clone();
-        let mut vertices = self.world.vertices.clone();
-
-        fn apply_velocity(world: &world::World, entity: &mut Box<dyn world::Entity>, mut displacement: Vector3<f32>) {
-            let original_displacement = displacement;
-
-            // collision detection fails when the entity travels more than 1 tile in a single tick
-            displacement.x = displacement.x.clamp(-1.0, 1.0);
-            displacement.y = displacement.y.clamp(-1.0, 1.0);
-            displacement.z = displacement.z.clamp(-1.0, 1.0);
+        self.world.resolve_entity_physics();
         
-            let increment = displacement * 0.1;
+       (self.vertex_buffer, self.index_buffer, self.index_count) = self.world.build_geometry_buffers(&mut self.device);
 
-            // Find the discrete coordinates of the tile containing the entity's new position (velocity + position)
-            fn get_discrete_point(pt: Point3<f32>) -> Point3<i16> {
-                (pt.x.round() as i16, pt.y.round()as i16, pt.z.round() as i16).into()
-            }
-
-            let mut collided = false;
-            while world.contains(&get_discrete_point(entity.center() + displacement)) && !displacement.is_zero() {
-                collided = true;
-                displacement -= increment;
-            }
-
-            if collided {
-                entity.set_velocity(entity.velocity() - original_displacement);
-            } else {
-               entity.set_velocity(entity.velocity() * (1.0 - entity.weight()));
-            }
-
-            entity.set_center(entity.center() + displacement);
-        }
-
-        for entity in self.entities.iter_mut() {
-            apply_velocity(&self.world, entity, entity.velocity());
-            apply_velocity(&self.world, entity, Vector3::new(0.0, entity.weight() * -1.0, 0.0));
-        }
-
-        for entity in self.entities.iter() {
-            let mut triangles = entity.build_object_data();
-            let mut offset_indices = triangles.indices
-                .iter()
-                .map(|i| *i + vertices.len() as u32)
-                .collect::<Vec<u32>>();
-            indices.append(&mut offset_indices);
-            vertices.append(&mut triangles.vertices);
-        }
-
-        self.index_count = indices.len() as u32;
-
-        self.index_buffer = self.device.create_buffer_init(
-            &wgpu::util::BufferInitDescriptor {
-                label: None,
-                contents: bytemuck::cast_slice(indices.as_slice()),
-                usage: wgpu::BufferUsages::INDEX,
-            }
-        );
-
-        self.vertex_buffer = self.device.create_buffer_init(
-            &wgpu::util::BufferInitDescriptor {
-                label: None,
-                contents: bytemuck::cast_slice(vertices.as_slice()),
-                usage: wgpu::BufferUsages::VERTEX
-            }
-        );
-
-        // Update light sources
-        let mut light_count = 0;
-        for (.., tile) in self.world.tiles.iter() {
-            if let Some(light) = tile.light() {
-                self.lighting.light_uniforms[light_count].color = light;
-                self.lighting.light_uniforms[light_count].position = [
-                    tile.position().x as f32,
-                    tile.position().y as f32,
-                    tile.position().z as f32,
-                    1.0
-                ];
-
-                light_count += 1;
-            }
-        }
-
-        for entity in self.entities.iter() {
-            if let Some(light) = entity.light() {
-                self.lighting.light_uniforms[light_count].color = light;
-                self.lighting.light_uniforms[light_count].position = [
-                    entity.center().x,
-                    entity.center().y,
-                    entity.center().z,
-                    1.0
-                ];
-
-                light_count += 1;
-            }
-        }
+       let (light_sources, ..) = self.world.build_light_sources();
 
         self.queue.write_buffer(
             &self.lighting_buffer, 
             0, 
-            bytemuck::cast_slice(&[self.lighting])
+            bytemuck::cast_slice(&[light_sources])
         );
 
         self.camera_uniform.update_projection(&self.camera);

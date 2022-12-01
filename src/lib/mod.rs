@@ -26,8 +26,8 @@ pub async fn run<F: 'static, G: 'static>(
     mut update: F, 
     mut process_events: G
 ) where 
-    F: FnMut(&mut camera::Camera, &mut world::World, &mut Vec<Box<dyn world::Entity>>), 
-    G: FnMut(&event::DeviceEvent, &mut camera::Camera, &mut world::World, &mut Vec<Box<dyn world::Entity>>) -> bool {
+    F: FnMut(&mut camera::Camera, &mut world::World), 
+    G: FnMut(&event::DeviceEvent, &mut camera::Camera, &mut world::World) -> bool {
 
     // Initialize the Window and EventLoop
     let event_loop = event_loop::EventLoop::new();
@@ -100,14 +100,14 @@ pub async fn run<F: 'static, G: 'static>(
             // The user can capture events from the window...
             // ...which can affect both the mesh and the camera
             event::Event::DeviceEvent { ref event, .. } => {
-                if process_events(event, &mut state.camera, &mut state.world, &mut state.entities) {
+                if process_events(event, &mut state.camera, &mut state.world) {
                     window.request_redraw();
                 }
             }
 
             // Update logic
             _ if accumulated_time >= fps => {
-                update(&mut state.camera, &mut state.world, &mut state.entities);
+                update(&mut state.camera, &mut state.world);
                 state.update();
 
                 accumulated_time -= fps;
