@@ -100,47 +100,55 @@ impl<'a> World<'a> {
     fn apply_displacement_to_entity(
         &mut self, 
         entity_index: usize,
-        mut displacement: Vector3<f32>
+        displacement: Vector3<f32>
     ) {
-        let mut entity = self.entity_objects[entity_index].clone();
-
-        let original_displacement = displacement;
-
-        // collision detection fails when the entity travels more than 1 tile in a single tick
-        displacement.x = displacement.x.clamp(-1.0, 1.0);
-        displacement.y = displacement.y.clamp(-1.0, 1.0);
-        displacement.z = displacement.z.clamp(-1.0, 1.0);
-
-        let increment = displacement * 0.1;
-
-        // Find the discrete coordinates of the tile containing the entity's new position (velocity + position)
-        fn get_discrete_point(pt: Point3<f32>) -> Point3<i16> {
-            (pt.x.round() as i16, pt.y.round()as i16, pt.z.round() as i16).into()
-        }
-
+        let mut handler = self.entity_objects[entity_index].clone();
         
         let (center, weight, velocity) = {
-            let entity = entity.borrow();
+            let entity = handler.borrow();
             (entity.center(), entity.weight(), entity.velocity())
         };
 
-        let mut collided = false;
-        while self.contains_tile(&get_discrete_point(center + displacement)) && !displacement.is_zero() {
-            collided = true;
-            displacement -= increment;
+        // collision detection fails when the entity travels more than 1 tile in a single tick
+        let mut actual_displacement = displacement;
+        [actual_displacement.x, actual_displacement.y, actual_displacement.z]
+            .iter_mut()
+            .for_each(|c| *c = c.clamp(-1.0, 1.0));
+
+        let increment = actual_displacement * 0.1;
+
+        // Find the discrete coordinates of the tile containing the entity's new position (velocity + position)
+        fn get_discrete_point(pt: Point3<f32>) -> Point3<i16> {
+            (pt.x.round() as i16, pt.y.round() as i16, pt.z.round() as i16).into()
+        }
+
+        let mut collisions: Vector3<bool> = (false, false, false).into();
+        while self.contains_tile(&get_discrete_point(center + actual_displacement)) && !actual_displacement.is_zero() {
+            collisions.x = self.contains_tile(&get_discrete_point(
+                center + Vector3::new(actual_displacement.x, 0.0, 0.0)));
+
+            collisions.y = self.contains_tile(&get_discrete_point(
+                center + Vector3::new(0.0, actual_displacement.y, 0.0)));
+
+            collisions.z = self.contains_tile(&get_discrete_point(
+                center + Vector3::new(0.0, 0.0, actual_displacement.z)));
+
+            actual_displacement -= increment;
         }
 
         {
-            let mut entity = entity.borrow_mut();
+            let mut entity = handler.borrow_mut();
+            
+            let mut diff = Vector3::new(0.0, 0.0, 0.0);
+            if collisions.x { diff.x = displacement.x; }
+            if collisions.y { diff.y = displacement.y; }
+            if collisions.z { diff.z = displacement.z; }
 
-            entity.set_center(center + displacement);
-            if collided {
-                entity.set_velocity(velocity - original_displacement);
-            } else {
-                entity.set_velocity(velocity * (1.0 - weight));
-            }
+            entity.set_center(center + actual_displacement);
+
+            entity.set_velocity(velocity * (1.0 - weight) - diff);
+            
         }
-        
     }
 
     pub(crate) fn build_light_sources(&self) -> (light::LightSources, u32) {

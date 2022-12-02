@@ -43,7 +43,7 @@ impl PlayerController {
                 camera.add_distance(scroll_amount * ZOOM_SPEED);
             }
     
-            // Panning
+            // Player pressed movement keys
             event::DeviceEvent::Key(event::KeyboardInput {
                 state: event::ElementState::Pressed,
                 virtual_keycode: Some(event::VirtualKeyCode::Left),
@@ -68,8 +68,8 @@ impl PlayerController {
                 ..
             } ) /* if self.direction & 1 != 1 */ => self.direction |= directions::DOWN,
     
-             // Panning
-             event::DeviceEvent::Key(event::KeyboardInput {
+            // Player releases movement keys
+            event::DeviceEvent::Key(event::KeyboardInput {
                 state: event::ElementState::Released,
                 virtual_keycode: Some(event::VirtualKeyCode::Left),
                 ..
@@ -98,16 +98,10 @@ impl PlayerController {
 
         if temp != self.direction {
             self.previous_direction = temp;
-        } else {
-            //println!("previous: {:#006b}", self.previous_direction);
-            //println!("current: {:#007b}", self.direction);
-        }
-
-        
+        }        
     }
 
     pub fn aggregate_player_velocity(&mut self, velocity: &mut Vector3<f32>) {
-        
         match self.direction & 3 {
             1 if self.previous_direction & 2 == 2 => velocity.z *= -1.0,
             2 if self.previous_direction & 2 == 1 => velocity.z *= -1.0,
