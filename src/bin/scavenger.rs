@@ -11,7 +11,7 @@ use block_engine_wgpu::{
     run,
     Config,
     camera, 
-    world  
+    world, GameData  
 };
 
 use winit::event;
@@ -23,23 +23,20 @@ fn main() {
 
     let update = {
         let mut init = true;
-        move |
-            camera: &mut camera::Camera,
-            world: &mut world::World,
-        | {
+        move |data: GameData| {
             if init {
                 init = false;
 
-                terrain::generate(world);
+                terrain::generate(data.world);
 
-                world.add_tile( {
+                data.world.add_tile( {
                     let mut pl = tile::Cube::new(
                         (1, 1, 1).into(), [1.0; 3]);
                     world::Drawable::set_light(&mut pl, [1.0; 4]);
                     pl
                 } );
 
-                world.add_entity_with_tag( 
+                data.world.add_entity_with_tag( 
                     { 
                         let mut pl = entity::PlaceholderEntity {
                             center: (0.0, 3.0, 0.0).into(),
@@ -54,49 +51,43 @@ fn main() {
                     "player"
                  );
             } else {
-                let center = world.get_entity("player").unwrap().borrow().center();
-                camera.set_target((center.x, center.y.round(), center.z).into());
+                let center = data.world.get_entity("player").unwrap().borrow().center();
+                data.camera.set_target((center.x, center.y.round(), center.z).into());
             }
         }
     };
 
     let process_events = {
         let mut init = true;
-        let mut pc = controller::PlayerController { 
-            index: 0, 
+        let mut pc = controller::PlayerController {
             direction: 0,
-            initial_speed: 0.1,
-            maximum_speed: 0.2,
-            acceleration: 0.05 
+            previous_direction: 0,
+            speed: 0.2,
+            acceleration: 0.1
         };
     
         move |
             event: &event::DeviceEvent, 
-            camera: &mut camera::Camera, 
-            world: &mut world::World,
+            data: GameData
         | -> bool {
-            if init && world.contains_entity("player") { 
+            if init && data.world.contains_entity("player") { 
                 init = false;
-                *camera = camera::CameraBuilder::new()
+                *data.camera = camera::CameraBuilder::new()
                     .pitch(1.0)
                     .yaw(0.1)
                     .target([0.0; 3].into())
                     .build();
                 
                 true
-            } else if world.contains_entity("player") {
-                controller::process_events(event, camera, &mut pc);
+            } else if data.world.contains_entity("player") {
+                pc.process_events(event, data.camera);
 
-                let mut handle = world.get_entity("player").unwrap();
+                let mut handle = data.world.get_entity("player").unwrap();
                 let mut entity = handle.borrow_mut();
                 
                 {
                     let mut velocity = entity.velocity();
-                    if pc.direction >> 0 & 1 == 1 { velocity.z -= if velocity.z == 0.0 { pc.initial_speed } else { pc.acceleration } }
-                    if pc.direction >> 1 & 1 == 1 { velocity.z += if velocity.z == 0.0 { pc.initial_speed } else { pc.acceleration } }
-                    if pc.direction >> 2 & 1 == 1 { velocity.x -=  if velocity.x == 0.0 { pc.initial_speed } else { pc.acceleration } }
-                    if pc.direction >> 3 & 1 == 1 { velocity.x +=  if velocity.x == 0.0 { pc.initial_speed } else { pc.acceleration } }
-
+                    pc.aggregate_player_velocity(&mut velocity);
                     entity.set_velocity(velocity);
                 }                          
                 

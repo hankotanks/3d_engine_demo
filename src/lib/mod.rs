@@ -21,13 +21,18 @@ pub struct Config {
     pub fps: usize
 }
 
+pub struct GameData<'a, 'b> {
+    pub world: &'a mut world::World<'b>,
+    pub camera: &'a mut camera::Camera,
+}
+
 pub async fn run<F: 'static, G: 'static>(
     config: Config, 
     mut update: F, 
     mut process_events: G
 ) where 
-    F: FnMut(&mut camera::Camera, &mut world::World), 
-    G: FnMut(&event::DeviceEvent, &mut camera::Camera, &mut world::World) -> bool {
+    F: FnMut(GameData), 
+    G: FnMut(&event::DeviceEvent, GameData) -> bool {
 
     // Initialize the Window and EventLoop
     let event_loop = event_loop::EventLoop::new();
@@ -100,14 +105,14 @@ pub async fn run<F: 'static, G: 'static>(
             // The user can capture events from the window...
             // ...which can affect both the mesh and the camera
             event::Event::DeviceEvent { ref event, .. } => {
-                if process_events(event, &mut state.camera, &mut state.world) {
+                if process_events(event, GameData { world: &mut state.world, camera: &mut state.camera } ) {
                     window.request_redraw();
                 }
             }
 
             // Update logic
             _ if accumulated_time >= fps => {
-                update(&mut state.camera, &mut state.world);
+                update(GameData { world: &mut state.world, camera: &mut state.camera } );
                 state.update();
 
                 accumulated_time -= fps;
