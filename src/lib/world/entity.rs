@@ -1,6 +1,7 @@
 use std::{
-    cell::{RefCell, Ref, RefMut}, 
-    rc::Rc, ops::Deref
+    cell::{ RefCell, Ref, RefMut }, 
+    rc::Rc, 
+    ops::Deref
 };
 
 use cgmath::Vector3;
@@ -13,8 +14,6 @@ pub trait Entity: drawable::Drawable {
 
     fn weight(&self) -> f32;
     fn set_weight(&mut self, weight: f32);
-
-    fn is_in_motion(&self) -> bool;
 }
 
 #[derive(Clone)]

@@ -146,11 +146,12 @@ impl Default for CameraBounds {
     }
 }
 
+#[derive(Default)]
 pub struct CameraBuilder(Camera);
 
 impl CameraBuilder {
     pub fn new() -> Self {
-        Self(Camera::default())
+        Self::default()
     }
 
     pub fn distance(mut self, distance: f32) -> Self {

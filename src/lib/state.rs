@@ -294,6 +294,7 @@ impl State {
     }
 
     pub(crate) fn update(&mut self) {
+        self.world.resolve_entity_lifetimes();
         self.world.resolve_entity_physics();
         
        (self.vertex_buffer, self.index_buffer, self.index_count) = self.world.build_geometry_buffers(&mut self.device);

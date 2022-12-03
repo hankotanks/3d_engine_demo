@@ -12,7 +12,7 @@ use crate::{
     light
 };
 
-use std::collections::HashMap;
+use std::{collections::HashMap, time, cmp};
 
 use cgmath::{ 
     Point3, 
@@ -32,7 +32,8 @@ pub struct World<'a> {
     tile_vertices: Vec<Vertex>,
     tile_indices: Vec<u32>,
     entity_objects: Vec<EntityHandle>,
-    entity_tags: HashMap<&'a str, EntityHandle>
+    entity_tags: HashMap<&'a str, EntityHandle>,
+    entity_lifetimes: Vec<(time::Instant, time::Duration)>
 }
 
 impl<'a> World<'a> {
@@ -50,21 +51,38 @@ impl<'a> World<'a> {
         self.tile_vertices.append(&mut triangles.vertices);
     }
 
-    pub fn add_entity(&mut self, entity: impl Entity + 'static) -> EntityHandle {
+    pub fn add_entity(
+        &mut self, 
+        entity: impl Entity + 'static,
+        lifetime: Option<time::Duration>
+    ) -> EntityHandle {
         let handle = EntityHandle::new(entity);
         let handle_clone = handle.clone();
         self.entity_objects.push(handle);
+        
+        self.entity_lifetimes.push((
+            time::Instant::now(), 
+            match lifetime { 
+                Some(lifetime) => lifetime, 
+                None => time::Duration::MAX 
+            } 
+        ));
 
         handle_clone
     }
 
-    pub fn add_entity_with_tag(&mut self, entity: impl Entity + 'static, tag: &'a str) -> EntityHandle {
-        let handle = self.add_entity(entity);
+    pub fn add_entity_with_tag(
+        &mut self,
+        tag: &'a str,
+        entity: impl Entity + 'static,
+        lifetime: Option<time::Duration>
+    ) -> EntityHandle {
+        let handle = self.add_entity(entity, lifetime);
         let handle_clone = handle.clone();
         self.entity_tags.insert(tag, handle);
 
         handle_clone
-    } 
+    }
 
     pub fn contains_tile(&self, position: &Point3<i16>) -> bool {
         self.tile_objects.contains_key(position)
@@ -74,12 +92,24 @@ impl<'a> World<'a> {
         self.entity_tags.contains_key(tag)
     }
 
-    pub fn get_tile(&self, position: Point3<i16>) -> Option<&Box<dyn Tile + 'static>> {
-        self.tile_objects.get(&position)
+    pub fn get_tile(&self, position: Point3<i16>) -> Option<&(dyn Tile + 'static)> {
+        self.tile_objects
+            .get(&position)
+            .map(|t| t.as_ref())
     }
 
     pub fn get_entity(&self, tag: &str) -> Option<EntityHandle> {
         self.entity_tags.get(tag).cloned()
+    }
+
+    pub(crate) fn resolve_entity_lifetimes(&mut self) {
+        for index in (0..self.entity_lifetimes.len()).rev() {
+            let (creation_instant, lifetime) = self.entity_lifetimes[index];
+            if matches!(creation_instant.elapsed().cmp(&lifetime), cmp::Ordering::Greater | cmp::Ordering::Equal) {
+                self.entity_objects.remove(index);
+                self.entity_lifetimes.remove(index);
+            }
+        }
     }
 
     pub(crate) fn resolve_entity_physics(&mut self) {
@@ -147,7 +177,6 @@ impl<'a> World<'a> {
             entity.set_center(center + actual_displacement);
 
             entity.set_velocity(velocity * (1.0 - weight) - diff);
-            
         }
     }
 
@@ -222,8 +251,6 @@ impl<'a> World<'a> {
             }
         );
 
-        let index_count = indices.len() as u32;
-
-        (vertex_buffer, index_buffer, index_count)
+        (vertex_buffer, index_buffer, indices.len() as u32)
     }
 }

@@ -1,5 +1,9 @@
 use block_engine_wgpu::world;
-use cgmath::{Point3, Vector3, Zero};
+
+use cgmath::{
+    Point3, 
+    Vector3
+};
 
 pub struct PlaceholderEntity {
     pub center: Point3<f32>,
@@ -25,10 +29,6 @@ impl world::Entity for PlaceholderEntity {
 
     fn set_weight(&mut self, weight: f32) {
         self.weight = weight;
-    }
-
-    fn is_in_motion(&self) -> bool {
-        self.velocity.is_zero()
     }
 }
 

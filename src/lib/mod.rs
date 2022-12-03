@@ -163,12 +163,9 @@ impl GameEvent {
             event::DeviceEvent::MouseWheel { delta } => Some(Self::MouseWheel { delta: *delta } ),
             event::DeviceEvent::Motion { .. } => None,
             event::DeviceEvent::Button { .. } => None,
-            event::DeviceEvent::Key(input) => {
-                match input.virtual_keycode {
-                    Some(kc) => Some(Self::Key { code: kc, state: input.state } ),
-                    None => None,
-                }
-            },
+            event::DeviceEvent::Key(input) => input.virtual_keycode.map(|kc| 
+                Self::Key { code: kc, state: input.state }
+            ),
             event::DeviceEvent::Text { .. } => None,
         }
     }

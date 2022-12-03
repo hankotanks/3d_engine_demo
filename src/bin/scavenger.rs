@@ -1,5 +1,7 @@
 mod util;
 
+use std::time::Duration;
+
 use cgmath::{Vector3, Zero};
 use util::{
     terrain, 
@@ -37,7 +39,7 @@ fn main() {
                     pl
                 } );
 
-                data.world.add_entity_with_tag( 
+                data.world.add_entity_with_tag("player",
                     { 
                         let mut pl = entity::PlaceholderEntity {
                             center: (0.0, 6.0, 0.0).into(),
@@ -49,7 +51,7 @@ fn main() {
                         world::Drawable::set_light(&mut pl, [1.0, 0.4, 0.1, 0.4]);
                         pl
                     },
-                    "player"
+                    None
                  );
             } else {
                 let center = data.world.get_entity("player").unwrap().borrow().center();
@@ -103,7 +105,7 @@ fn main() {
                             weight: 0.05,
                         };
 
-                        data.world.add_entity(entity);
+                        data.world.add_entity(entity, Some(Duration::from_secs(4)));
                     }
 
                     entity.set_velocity(velocity);
