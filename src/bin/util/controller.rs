@@ -1,5 +1,5 @@
 use block_engine_wgpu::camera;
-use cgmath::Vector3;
+use cgmath::{Vector3, Zero};
 use winit::event;
 
 const ZOOM_SPEED: f32 = 0.6;
@@ -13,7 +13,6 @@ pub mod directions {
 
 pub struct PlayerController {
     pub direction: u8,
-    pub previous_direction: u8,
     pub speed: f32,
     pub acceleration: f32,
 }
@@ -24,8 +23,6 @@ impl PlayerController {
         event: &event::DeviceEvent, 
         camera: &mut camera::Camera,
     ) {
-        let temp = self.direction;
-
         match &event {        
             // Zoom
             event::DeviceEvent::MouseWheel { delta, .. } => {
@@ -48,25 +45,25 @@ impl PlayerController {
                 state: event::ElementState::Pressed,
                 virtual_keycode: Some(event::VirtualKeyCode::Left),
                 ..
-            } ) /* if (self.direction >> 3) & 1 != 1 */ => self.direction |= directions::LEFT,
+            } ) if (self.direction >> 3) & 1 != 1 => self.direction |= directions::LEFT,
     
             event::DeviceEvent::Key(event::KeyboardInput {
                 state: event::ElementState::Pressed,
                 virtual_keycode: Some(event::VirtualKeyCode::Right),
                 ..
-            } ) /* if (self.direction >> 2) & 1 != 1 */ => self.direction |= directions::RIGHT,
+            } ) if (self.direction >> 2) & 1 != 1 => self.direction |= directions::RIGHT,
     
             event::DeviceEvent::Key(event::KeyboardInput {
                 state: event::ElementState::Pressed,
                 virtual_keycode: Some(event::VirtualKeyCode::Up),
                 ..
-            } ) /* if (self.direction >> 1) & 1 != 1 */ => self.direction |= directions::UP,
+            } ) if (self.direction >> 1) & 1 != 1 => self.direction |= directions::UP,
     
             event::DeviceEvent::Key(event::KeyboardInput {
                 state: event::ElementState::Pressed,
                 virtual_keycode: Some(event::VirtualKeyCode::Down),
                 ..
-            } ) /* if self.direction & 1 != 1 */ => self.direction |= directions::DOWN,
+            } ) if self.direction & 1 != 1 => self.direction |= directions::DOWN,
     
             // Player releases movement keys
             event::DeviceEvent::Key(event::KeyboardInput {
@@ -95,24 +92,20 @@ impl PlayerController {
     
             _ => {  }
         }
-
-        if temp != self.direction {
-            self.previous_direction = temp;
-        }        
     }
 
     pub fn aggregate_player_velocity(&mut self, velocity: &mut Vector3<f32>) {
         match self.direction & 3 {
-            1 if self.previous_direction & 2 == 2 => velocity.z *= -1.0,
-            2 if self.previous_direction & 2 == 1 => velocity.z *= -1.0,
+            1 if velocity.z.is_zero() => velocity.z -= self.speed,
+            2 if velocity.z.is_zero() => velocity.z += self.speed,
             1 => velocity.z -= self.acceleration,
             2 => velocity.z += self.acceleration,
             _ => {  }
         }
 
         match (self.direction >> 2) & 3 {
-            1 if (self.previous_direction >> 2) & 2 == 2 => velocity.x *= -1.0,
-            2 if (self.previous_direction >> 2) & 2 == 1 => velocity.x *= -1.0,
+            1 if velocity.x.is_zero() => velocity.x -= self.speed,
+            2 if velocity.x.is_zero() => velocity.x += self.speed,
             1 => velocity.x -= self.acceleration,
             2 => velocity.x += self.acceleration,
             _ => {  }

@@ -61,7 +61,6 @@ fn main() {
         let mut init = true;
         let mut pc = controller::PlayerController {
             direction: 0,
-            previous_direction: 0,
             speed: 0.2,
             acceleration: 0.1
         };
