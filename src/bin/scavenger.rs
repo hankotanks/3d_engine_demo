@@ -1,5 +1,6 @@
 mod util;
 
+use cgmath::{Vector3, Zero};
 use util::{
     terrain, 
     controller, 
@@ -11,10 +12,10 @@ use block_engine_wgpu::{
     run,
     Config,
     camera, 
-    world, GameData  
+    world, 
+    GameData, 
+    GameEvent, GameWindow  
 };
-
-use winit::event;
 
 fn main() {
     let config = Config {
@@ -39,7 +40,7 @@ fn main() {
                 data.world.add_entity_with_tag( 
                     { 
                         let mut pl = entity::PlaceholderEntity {
-                            center: (0.0, 3.0, 0.0).into(),
+                            center: (0.0, 6.0, 0.0).into(),
                             color: [1.0; 3],
                             light: Some([1.0, 0.4, 0.1, 0.4]),
                             velocity: (0.0, 0.0, 0.0).into(),
@@ -62,11 +63,14 @@ fn main() {
         let mut pc = controller::PlayerController {
             direction: 0,
             speed: 0.2,
-            acceleration: 0.1
+            acceleration: 0.1,
+            pressed: false,
+            cursor_drag_vector: Vector3::zero(),
         };
     
         move |
-            event: &event::DeviceEvent, 
+            window: GameWindow,
+            event: GameEvent,
             data: GameData
         | -> bool {
             if init && data.world.contains_entity("player") { 
@@ -79,7 +83,7 @@ fn main() {
                 
                 true
             } else if data.world.contains_entity("player") {
-                pc.process_events(event, data.camera);
+                pc.process_events(window, event, data.camera);
 
                 let mut handle = data.world.get_entity("player").unwrap();
                 let mut entity = handle.borrow_mut();
@@ -87,6 +91,21 @@ fn main() {
                 {
                     let mut velocity = entity.velocity();
                     pc.aggregate_player_velocity(&mut velocity);
+
+                    if let Some(mut drag_vector) = pc.spawn_projectile() {
+                        drag_vector *= -1.0;
+
+                        let entity = entity::PlaceholderEntity {
+                            center: entity.center(),
+                            color: [1.0; 3],
+                            light: Some([1.0, 1.0, 1.0, 0.2]),
+                            velocity: drag_vector,
+                            weight: 0.05,
+                        };
+
+                        data.world.add_entity(entity);
+                    }
+
                     entity.set_velocity(velocity);
                 }                          
                 

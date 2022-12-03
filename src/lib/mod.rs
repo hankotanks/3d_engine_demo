@@ -11,9 +11,10 @@ use std::time;
 
 use winit::{
     event_loop,
-    window::WindowBuilder,
+    window,
     event,
-    event::WindowEvent,
+    event::WindowEvent, 
+    dpi,
 };
 
 #[derive(Clone)]
@@ -32,11 +33,11 @@ pub async fn run<F: 'static, G: 'static>(
     mut process_events: G
 ) where 
     F: FnMut(GameData), 
-    G: FnMut(&event::DeviceEvent, GameData) -> bool {
+    G: FnMut(GameWindow, GameEvent, GameData) -> bool {
 
     // Initialize the Window and EventLoop
     let event_loop = event_loop::EventLoop::new();
-    let window = WindowBuilder::new().build(&event_loop).unwrap();
+    let window = window::WindowBuilder::new().build(&event_loop).unwrap();
 
     // Contains ALL of the engine's mutable state...
     let mut state = state::State::new(&window).await;
@@ -98,16 +99,24 @@ pub async fn run<F: 'static, G: 'static>(
                     },
 
                     // Unhandled behavior
-                    _ => {  }
+                    _ => { 
+                        if let Some(game_event) = GameEvent::from_window_event(event) {
+                            if process_events(GameWindow::new(&window), game_event, GameData { world: &mut state.world, camera: &mut state.camera } ) {
+                                window.request_redraw();
+                            }
+                        }
+                    }
                 }
             },
 
             // The user can capture events from the window...
             // ...which can affect both the mesh and the camera
             event::Event::DeviceEvent { ref event, .. } => {
-                if process_events(event, GameData { world: &mut state.world, camera: &mut state.camera } ) {
-                    window.request_redraw();
-                }
+                if let Some(game_event) = GameEvent::from_device_event(event) {
+                    if process_events(GameWindow::new(&window), game_event, GameData { world: &mut state.world, camera: &mut state.camera } ) {
+                        window.request_redraw();
+                    }
+                }   
             }
 
             // Update logic
@@ -122,4 +131,71 @@ pub async fn run<F: 'static, G: 'static>(
             _ => {  }
         }
     } );
+}
+
+pub struct GameWindow {
+    window_dimensions: dpi::PhysicalSize<u32>,
+}
+
+impl GameWindow {
+    pub fn new(window: &window::Window) -> Self {
+        Self { window_dimensions: window.inner_size() }
+    }
+
+    pub fn dimensions(&self) -> (u32, u32) {
+        (self.window_dimensions.width, self.window_dimensions.height)
+    }
+}
+
+pub enum GameEvent {
+    Key { code: event::VirtualKeyCode, state: event::ElementState },
+    MouseWheel { delta: event::MouseScrollDelta },
+    MouseMoved { position: dpi::PhysicalPosition<f64> },
+    MouseButton { button: event::MouseButton, state: event::ElementState },
+}
+
+impl GameEvent {
+    pub(crate) fn from_device_event(event: &event::DeviceEvent) -> Option<Self> {
+        match event {
+            event::DeviceEvent::Added => None,
+            event::DeviceEvent::Removed => None,
+            event::DeviceEvent::MouseMotion { .. } => None,
+            event::DeviceEvent::MouseWheel { delta } => Some(Self::MouseWheel { delta: *delta } ),
+            event::DeviceEvent::Motion { .. } => None,
+            event::DeviceEvent::Button { .. } => None,
+            event::DeviceEvent::Key(input) => {
+                match input.virtual_keycode {
+                    Some(kc) => Some(Self::Key { code: kc, state: input.state } ),
+                    None => None,
+                }
+            },
+            event::DeviceEvent::Text { .. } => None,
+        }
+    }
+
+    pub(crate) fn from_window_event(event: &event::WindowEvent<'_>) -> Option<Self> {
+        match event {
+            WindowEvent::Resized(_) => None,
+            WindowEvent::Moved(_) => None,
+            WindowEvent::CloseRequested => None,
+            WindowEvent::Destroyed => None,
+            WindowEvent::DroppedFile(_) => None,
+            WindowEvent::HoveredFile(_) => None,
+            WindowEvent::HoveredFileCancelled => None,
+            WindowEvent::ReceivedCharacter(_) => None,
+            WindowEvent::Focused(_) => None,
+            WindowEvent::KeyboardInput { .. } => None,
+            WindowEvent::ModifiersChanged(_) => None,
+            WindowEvent::CursorMoved { position, .. } => Some(Self::MouseMoved { position: *position } ),
+            WindowEvent::CursorEntered { .. } => None,
+            WindowEvent::CursorLeft { .. } => None,
+            WindowEvent::MouseWheel { .. } => None,
+            WindowEvent::MouseInput { button, state, .. } => Some(Self::MouseButton { button: *button, state: *state } ),
+            WindowEvent::TouchpadPressure { .. } => None,
+            WindowEvent::AxisMotion { .. } => None,
+            WindowEvent::Touch(_) => None,
+            WindowEvent::ScaleFactorChanged { .. } => None,
+            WindowEvent::ThemeChanged(_) => None,
+        }
+    }
 }
