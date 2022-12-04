@@ -27,13 +27,15 @@ pub struct GameData<'a, 'b> {
     pub camera: &'a mut camera::Camera,
 }
 
-pub async fn run<F: 'static, G: 'static>(
+pub async fn run<I: 'static, U: 'static, E: 'static>(
     config: Config, 
-    mut update: F, 
-    mut process_events: G
-) where 
-    F: FnMut(GameData), 
-    G: FnMut(GameWindow, GameEvent, GameData) -> bool {
+    game_init: I,
+    mut game_update: U, 
+    mut process_events: E
+) where
+    I: FnOnce(GameData),
+    U: FnMut(GameData), 
+    E: FnMut(GameWindow, GameEvent, GameData) -> bool {
 
     // Initialize the Window and EventLoop
     let event_loop = event_loop::EventLoop::new();
@@ -41,6 +43,8 @@ pub async fn run<F: 'static, G: 'static>(
 
     // Contains ALL of the engine's mutable state...
     let mut state = state::State::new(&window).await;
+
+    game_init(GameData { world: &mut state.world, camera: &mut state.camera } );
 
     // ...except that related to frame time
     let fps = (config.fps as f32).recip();
@@ -77,14 +81,13 @@ pub async fn run<F: 'static, G: 'static>(
                 match event {
                     // Handle close behavior
                     WindowEvent::CloseRequested | WindowEvent::KeyboardInput {
-                        input:
-                        event::KeyboardInput {
-                                state: event::ElementState::Pressed,
-                                virtual_keycode: Some(
-                                    event::VirtualKeyCode::Escape
-                                ),
-                                ..
-                            },
+                        input: event::KeyboardInput {
+                            state: event::ElementState::Pressed,
+                            virtual_keycode: Some(
+                                event::VirtualKeyCode::Escape
+                            ),
+                            ..
+                        },
                         ..
                     } => *control_flow = event_loop::ControlFlow::Exit,
 
@@ -114,14 +117,14 @@ pub async fn run<F: 'static, G: 'static>(
             event::Event::DeviceEvent { ref event, .. } => {
                 if let Some(game_event) = GameEvent::from_device_event(event) {
                     if process_events(GameWindow::new(&window), game_event, GameData { world: &mut state.world, camera: &mut state.camera } ) {
-                        window.request_redraw();
+                        window.request_redraw();   
                     }
                 }   
             }
 
             // Update logic
             _ if accumulated_time >= fps => {
-                update(GameData { world: &mut state.world, camera: &mut state.camera } );
+                game_update(GameData { world: &mut state.world, camera: &mut state.camera } );
                 state.update();
 
                 accumulated_time -= fps;

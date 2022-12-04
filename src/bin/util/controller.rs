@@ -16,7 +16,7 @@ pub struct PlayerController {
     pub speed: f32,
     pub acceleration: f32,
     pub pressed: bool,
-    pub cursor_drag_vector: Vector3<f32>,
+    pub current_drag_vector: Vector3<f32>,
 }
 
 impl PlayerController {
@@ -58,7 +58,7 @@ impl PlayerController {
                 position.y -= hh;
                 let degree = (position.x / hw, position.y/ hh);
 
-                self.cursor_drag_vector = Vector3::new(degree.0 as f32, 0.0, degree.1 as f32)
+                self.current_drag_vector = Vector3::new(degree.0 as f32, 0.0, degree.1 as f32)
             }
     
             // Player pressed movement keys
@@ -107,9 +107,9 @@ impl PlayerController {
     }
 
     pub fn spawn_projectile(&mut self) -> Option<Vector3<f32>> {
-        if !self.pressed && !self.cursor_drag_vector.is_zero() {
-            let drag_vector = self.cursor_drag_vector;
-            self.cursor_drag_vector = Vector3::new(0.0, 0.0, 0.0);
+        if !self.pressed && !self.current_drag_vector.is_zero() {
+            let drag_vector = self.current_drag_vector;
+            self.current_drag_vector = Vector3::new(0.0, 0.0, 0.0);
 
             return Some(drag_vector);
         }
