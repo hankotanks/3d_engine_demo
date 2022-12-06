@@ -1,6 +1,6 @@
 mod util;
 
-use std::time::Duration;
+use std::{time::Duration, sync::{Arc, Mutex}};
 
 use cgmath::{Vector3, Zero};
 use util::{
@@ -36,6 +36,7 @@ fn game_init(data: GameData) {
             color: [1.0; 3],
             light: Some([1.0, 0.4, 0.1, 0.4]),
             velocity: (0.0, 0.0, 0.0).into(),
+            collisions: (false, false, false).into(),
             weight: 0.2,
         },
         None
@@ -48,53 +49,61 @@ fn game_init(data: GameData) {
         .build();
 } 
 
-fn game_update(data: GameData) {
-    let center = data.world.get_entity("player").unwrap().borrow().center();
-    data.camera.set_target((center.x, center.y.round(), center.z).into());
-}
-
 fn main() {
     let config = Config { fps: 60 };
 
-    let process_events = {
-        let mut controller = controller::PlayerController {
-            direction: 0,
-            speed: 0.2,
-            acceleration: 0.1,
-            pressed: false,
-            current_drag_vector: Vector3::zero(),
-        };
-    
-        move |window: GameWindow, event: GameEvent, data: GameData| {
-            controller.process_events(window, event, data.camera);
-    
+    let controller = Arc::new(Mutex::new(controller::PlayerController {
+        direction: 0,
+        acceleration: 0.15,
+        pressed: false,
+        current_drag_vector: Vector3::zero(),
+    } ));
+
+    let game_update = {
+        let controller_ref = Arc::clone(&controller);
+
+        move |data: GameData| {
+            let center = data.world.get_entity("player").unwrap().borrow().center();
+            data.camera.set_target((center.x, center.y.round(), center.z).into());
+
             let mut handle = data.world.get_entity("player").unwrap();
             let mut entity = handle.borrow_mut();
-            
+
             {
                 let mut velocity = entity.velocity();
-                controller.aggregate_player_velocity(&mut velocity);
-    
-                if let Some(mut drag_vector) = controller.spawn_projectile() {
+                controller_ref.lock().unwrap().aggregate_player_velocity(&mut velocity);
+                entity.set_velocity(velocity);
+
+                if let Some(mut drag_vector) = controller_ref.lock().unwrap().spawn_projectile() {
                     drag_vector *= -1.0;
-    
+
                     let entity = entity::PlaceholderEntity {
                         center: entity.center(),
                         color: [1.0; 3],
                         light: Some([1.0, 1.0, 1.0, 0.2]),
                         velocity: drag_vector,
+                        collisions: (false, false, false).into(),
                         weight: 0.05,
                     };
-    
+
                     data.world.add_entity(entity, Some(Duration::from_secs(4)));
                 }
-    
-                entity.set_velocity(velocity);
             }
+        }
+    };
+
+    let process_events = {
+        let controller_ref = Arc::clone(&controller);
+        move |window: GameWindow, event: GameEvent, data: GameData| {
+            controller_ref.lock().unwrap().process_events(window, event, data.camera);
     
-            true
+            false
         }
     };
 
     pollster::block_on(run(config, game_init, game_update, process_events)); 
 }
+
+/*
+
+ */

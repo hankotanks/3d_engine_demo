@@ -53,6 +53,8 @@ pub async fn run<I: 'static, U: 'static, E: 'static>(
 
     // The game loop itself
     event_loop.run(move |event, _, control_flow| {
+        *control_flow = event_loop::ControlFlow::Poll;
+
         accumulated_time += current.elapsed().as_secs_f32();
         current = time::Instant::now();        
 
@@ -69,8 +71,14 @@ pub async fn run<I: 'static, U: 'static, E: 'static>(
             },
 
             // Redraw
-            event::Event::MainEventsCleared => { 
-                window.request_redraw(); 
+            event::Event::MainEventsCleared if accumulated_time >= fps => {
+                game_update(GameData { world: &mut state.world, camera: &mut state.camera } );
+                
+                state.update();
+
+                accumulated_time -= fps;
+
+                window.request_redraw();
             },
 
             // Handle close and resize events
@@ -104,9 +112,11 @@ pub async fn run<I: 'static, U: 'static, E: 'static>(
                     // Unhandled behavior
                     _ => { 
                         if let Some(game_event) = GameEvent::from_window_event(event) {
-                            if process_events(GameWindow::new(&window), game_event, GameData { world: &mut state.world, camera: &mut state.camera } ) {
-                                window.request_redraw();
-                            }
+                            process_events(
+                                GameWindow::new(&window), 
+                                game_event, 
+                                GameData { world: &mut state.world, camera: &mut state.camera } 
+                            );
                         }
                     }
                 }
@@ -116,18 +126,13 @@ pub async fn run<I: 'static, U: 'static, E: 'static>(
             // ...which can affect both the mesh and the camera
             event::Event::DeviceEvent { ref event, .. } => {
                 if let Some(game_event) = GameEvent::from_device_event(event) {
-                    if process_events(GameWindow::new(&window), game_event, GameData { world: &mut state.world, camera: &mut state.camera } ) {
-                        window.request_redraw();   
-                    }
+                    process_events(
+                        GameWindow::new(&window), 
+                        game_event, 
+                        GameData { world: &mut state.world, camera: &mut state.camera } 
+                    );
+                    
                 }   
-            }
-
-            // Update logic
-            _ if accumulated_time >= fps => {
-                game_update(GameData { world: &mut state.world, camera: &mut state.camera } );
-                state.update();
-
-                accumulated_time -= fps;
             }
 
             // Unhandled events

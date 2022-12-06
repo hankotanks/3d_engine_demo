@@ -11,6 +11,7 @@ pub struct PlaceholderEntity {
     pub light: Option<[f32; 4]>,
 
     pub velocity: Vector3<f32>,
+    pub collisions: Vector3<bool>,
     pub weight: f32
 }
 
@@ -29,6 +30,14 @@ impl world::Entity for PlaceholderEntity {
 
     fn set_weight(&mut self, weight: f32) {
         self.weight = weight;
+    }
+
+    fn collisions(&self) -> Vector3<bool> {
+        self.collisions
+    }
+
+    fn set_collisions(&mut self, collisions: Vector3<bool>) {
+        self.collisions = collisions;
     }
 }
 

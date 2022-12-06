@@ -9,11 +9,28 @@ pub mod directions {
     pub const DOWN: u8 = 1 << 1;
     pub const LEFT: u8 = 1 << 2;
     pub const RIGHT: u8 = 1 << 3;
+
+    pub fn x_signum(direction: u8) -> f32 {
+        match (direction >> 2) & 3 {
+            0 | 3 => 0.0,
+            1 => -1.0,
+            2 => 1.0,
+            _ => unreachable!()
+        }
+    }
+
+    pub fn z_signum(direction: u8) -> f32 {
+        match direction & 3 {
+            0 | 3 => 0.0,
+            1 => -1.0,
+            2 => 1.0,
+            _ => unreachable!()
+        }
+    }
 }
 
 pub struct PlayerController {
     pub direction: u8,
-    pub speed: f32,
     pub acceleration: f32,
     pub pressed: bool,
     pub current_drag_vector: Vector3<f32>,
@@ -118,22 +135,8 @@ impl PlayerController {
     }
 
     pub fn aggregate_player_velocity(&mut self, velocity: &mut Vector3<f32>) {
-        match self.direction & 3 {
-            1 if velocity.z.is_zero() => velocity.z -= self.speed,
-            2 if velocity.z.is_zero() => velocity.z += self.speed,
-            1 => velocity.z -= self.acceleration,
-            2 => velocity.z += self.acceleration,
-            _ => {  }
-        }
-
-        match (self.direction >> 2) & 3 {
-            1 if velocity.x.is_zero() => velocity.x -= self.speed,
-            2 if velocity.x.is_zero() => velocity.x += self.speed,
-            1 => velocity.x -= self.acceleration,
-            2 => velocity.x += self.acceleration,
-            _ => {  }
-        }
-        
+        velocity.x += self.acceleration * directions::x_signum(self.direction);
+        velocity.z += self.acceleration * directions::z_signum(self.direction);
     }
 }
 

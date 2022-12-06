@@ -10,9 +10,11 @@ use super::drawable;
 
 pub trait Entity: drawable::Drawable {
     fn velocity(&self) -> Vector3<f32>;
+    fn collisions(&self) -> Vector3<bool>;
     fn weight(&self) -> f32;
 
     fn set_velocity(&mut self, velocity: Vector3<f32>);
+    fn set_collisions(&mut self, collisions: Vector3<bool>);
     fn set_weight(&mut self, weight: f32);
 }
 

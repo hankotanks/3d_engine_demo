@@ -152,6 +152,7 @@ impl<'a> World<'a> {
             (pt.x.round() as i16, pt.y.round() as i16, pt.z.round() as i16).into()
         }
 
+        let mut initial_collisions: Option<Vector3<bool>> = None;
         let mut collisions: Vector3<bool> = (false, false, false).into();
         while self.contains_tile(&get_discrete_point(center + actual_displacement)) && !actual_displacement.is_zero() {
             collisions.x = self.contains_tile(&get_discrete_point(
@@ -162,6 +163,8 @@ impl<'a> World<'a> {
 
             collisions.z = self.contains_tile(&get_discrete_point(
                 center + Vector3::new(0.0, 0.0, actual_displacement.z)));
+            
+            if initial_collisions.is_none() { initial_collisions = Some(collisions); }
 
             actual_displacement -= increment;
         }
@@ -170,13 +173,15 @@ impl<'a> World<'a> {
             let mut entity = handler.borrow_mut();
             
             let mut diff = Vector3::new(0.0, 0.0, 0.0);
-            if collisions.x { diff.x = displacement.x; }
-            if collisions.y { diff.y = displacement.y; }
-            if collisions.z { diff.z = displacement.z; }
-
+            if let Some(collisions) = initial_collisions {
+                if collisions.x { diff.x = displacement.x; }
+                if collisions.y { diff.y = displacement.y; }
+                if collisions.z { diff.z = displacement.z; }
+            }
+            
             entity.set_center(center + actual_displacement);
-
-            entity.set_velocity(velocity * (1.0 - weight) - diff);
+            entity.set_velocity((velocity - diff) * (1.0 - weight));
+            
         }
     }
 
