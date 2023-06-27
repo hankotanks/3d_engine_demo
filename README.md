@@ -1,4 +1,4 @@
-# 3d_engine_demo
+# engine_demo
 A basic rendering engine with an adjustable 3D camera, a grid-based environment system, and sliding entities with (janky) collision physics. 
 
 <img src="https://user-images.githubusercontent.com/17710458/211341703-3e483f02-15a1-451e-82a3-de8e5553f427.gif" alt="demo" width="550"/>
